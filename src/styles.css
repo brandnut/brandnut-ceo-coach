@@ -269,9 +269,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding-bottom: 0.5rem;
   margin-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   font-size: 0.8125rem;
   color: #718096;
 }

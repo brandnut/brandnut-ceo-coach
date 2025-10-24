@@ -70,6 +70,7 @@ export default function Chat({ userId, username, onLogout }: Props) {
     setMessages((prev) => [...prev, userMessage])
     setInput('')
     setIsStreaming(true)
+    setWorkflowStatus('正在思考')
 
     const assistantMessage: Message = {
       id: (Date.now() + 1).toString(),
