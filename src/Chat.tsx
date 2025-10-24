@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Streamdown } from 'streamdown'
 import { sendMessage, getConversations, getMessages, Message, Conversation } from './dify'
-import './markdown.css'
+import './markdown.scss'
 
 interface Props {
   userId: string
