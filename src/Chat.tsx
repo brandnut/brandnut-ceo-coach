@@ -23,16 +23,18 @@ export default function Chat({ userId, username, onLogout }: Props) {
     loadConversations()
   }, [userId])
 
-  const isNearBottom = () => {
-    const container = messagesContainerRef.current
-    if (!container) return true
-
-    const threshold = 150
-    return container.scrollHeight - container.scrollTop - container.clientHeight < threshold
-  }
-
   useEffect(() => {
-    if (isNearBottom()) {
+    const container = messagesContainerRef.current
+    if (!container || messages.length === 0) return
+
+    const atTop = container.scrollTop === 0
+    const threshold = 150
+    const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < threshold
+
+    // Scroll if: just loaded conversation (at top with messages) OR streaming and near bottom
+    const shouldScroll = (atTop && messages.length > 0) || nearBottom
+
+    if (shouldScroll) {
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
       }, 50)
@@ -51,6 +53,7 @@ export default function Chat({ userId, username, onLogout }: Props) {
 
   const loadConversation = async (convId: string) => {
     setCurrentConvId(convId)
+    setMessages([]) // Clear immediately to avoid flashing old messages
     const history = await getMessages(convId, userId)
     setMessages(history)
   }
