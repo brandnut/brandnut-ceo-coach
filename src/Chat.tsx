@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Streamdown } from 'streamdown'
 import { sendMessage, getConversations, getMessages, Message, Conversation } from './dify'
+import './markdown.css'
 
 interface Props {
   userId: string
@@ -146,7 +147,9 @@ export default function Chat({ userId, username, onLogout }: Props) {
                       <span className="loading-text">{workflowStatus}</span>
                     </div>
                   )}
-                  <Streamdown>{msg.content}</Streamdown>
+                  <div className="markdown-body">
+                    <Streamdown>{msg.content}</Streamdown>
+                  </div>
                 </div>
               </div>
             )
