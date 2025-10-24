@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { Streamdown } from 'streamdown'
+import CustomStreamdown from './CustomStreamdown'
 import { sendMessage, getConversations, getMessages, Message, Conversation } from './dify'
-// import './markdown.scss'
 
 interface Props {
   userId: string
@@ -165,7 +164,7 @@ export default function Chat({ userId, username, onLogout }: Props) {
                     </div>
                   )}
                   <div className="markdown-body">
-                    <Streamdown>{msg.content}</Streamdown>
+                    <CustomStreamdown>{msg.content}</CustomStreamdown>
                   </div>
                 </div>
               </div>
