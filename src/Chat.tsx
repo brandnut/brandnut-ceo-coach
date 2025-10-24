@@ -17,13 +17,26 @@ export default function Chat({ userId, username, onLogout }: Props) {
   const [isStreaming, setIsStreaming] = useState(false)
   const [workflowStatus, setWorkflowStatus] = useState<string>('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     loadConversations()
   }, [userId])
 
+  const isNearBottom = () => {
+    const container = messagesContainerRef.current
+    if (!container) return true
+
+    const threshold = 150
+    return container.scrollHeight - container.scrollTop - container.clientHeight < threshold
+  }
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (isNearBottom()) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
+      }, 50)
+    }
   }, [messages])
 
   const loadConversations = async () => {
@@ -133,7 +146,7 @@ export default function Chat({ userId, username, onLogout }: Props) {
       </div>
 
       <div className="main">
-        <div className="messages">
+        <div className="messages" ref={messagesContainerRef}>
           {messages.map((msg, index) => {
             const isLastMessage = index === messages.length - 1
             const showLoading = msg.role === 'assistant' && isStreaming && isLastMessage
