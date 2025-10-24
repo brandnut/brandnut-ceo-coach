@@ -20,7 +20,9 @@ export async function sendMessage(
   conversationId: string | null,
   onChunk: (text: string) => void,
   onEnd: (convId: string, messageId: string) => void,
-  onError: (error: string) => void
+  onError: (error: string) => void,
+  onWorkflowStarted?: () => void,
+  onNodeStarted?: (title: string) => void
 ): Promise<void> {
   try {
     const response = await fetch(`${API_URL}/chat-messages`, {
@@ -64,7 +66,13 @@ export async function sendMessage(
         try {
           const data = JSON.parse(line.slice(6))
 
-          if (data.event === 'message') {
+          if (data.event === 'workflow_started') {
+            console.log('[SSE] workflow_started')
+            onWorkflowStarted?.()
+          } else if (data.event === 'node_started') {
+            console.log('[SSE] node_started:', data.data?.title)
+            onNodeStarted?.(data.data?.title || '正在处理')
+          } else if (data.event === 'message') {
             console.log('[SSE] message chunk:', data.answer?.slice(0, 50))
             onChunk(data.answer)
             currentConvId = data.conversation_id

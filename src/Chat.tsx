@@ -14,6 +14,7 @@ export default function Chat({ userId, username, onLogout }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
+  const [workflowStatus, setWorkflowStatus] = useState<string>('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -67,6 +68,7 @@ export default function Chat({ userId, username, onLogout }: Props) {
       currentConvId,
       (chunk) => {
         console.log('[Chat] onChunk called, chunk length:', chunk.length)
+        setWorkflowStatus('')
         setMessages((prev) => {
           const updated = [...prev]
           const lastIndex = updated.length - 1
@@ -83,6 +85,7 @@ export default function Chat({ userId, username, onLogout }: Props) {
         setCurrentConvId(convId)
         loadConversations()
         setIsStreaming(false)
+        setWorkflowStatus('')
       },
       (error) => {
         setMessages((prev) => {
@@ -94,6 +97,13 @@ export default function Chat({ userId, username, onLogout }: Props) {
           return updated
         })
         setIsStreaming(false)
+        setWorkflowStatus('')
+      },
+      () => {
+        setWorkflowStatus('正在工作')
+      },
+      (title) => {
+        setWorkflowStatus(title)
       }
     )
   }
@@ -123,13 +133,24 @@ export default function Chat({ userId, username, onLogout }: Props) {
 
       <div className="main">
         <div className="messages">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`message ${msg.role}`}>
-              <div className="message-content">
-                <Streamdown>{msg.content}</Streamdown>
+          {messages.map((msg, index) => {
+            const isLastMessage = index === messages.length - 1
+            const showLoading = msg.role === 'assistant' && isStreaming && isLastMessage
+
+            return (
+              <div key={msg.id} className={`message ${msg.role}`}>
+                <div className="message-content">
+                  {showLoading && workflowStatus && (
+                    <div className="message-loading">
+                      <span className="spinner"></span>
+                      <span className="loading-text">{workflowStatus}</span>
+                    </div>
+                  )}
+                  <Streamdown>{msg.content}</Streamdown>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
           <div ref={messagesEndRef} />
         </div>
 
