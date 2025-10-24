@@ -125,10 +125,8 @@ export async function getMessages(conversationId: string, userId: string): Promi
     const data = await response.json()
     const messages: Message[] = []
 
-    // Dify returns messages in reverse order (newest first), so reverse it
-    const messagesData = (data.data || []).reverse()
-
-    for (const msg of messagesData) {
+    // API returns messages in chronological order (oldest first)
+    for (const msg of data.data || []) {
       if (msg.query) {
         messages.push({
           id: `${msg.id}-user`,
