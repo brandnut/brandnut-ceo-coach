@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 * {
   margin: 0;
   padding: 0;
@@ -229,7 +233,7 @@ body {
 }
 
 /* Markdown content from streamdown */
-.message-content p {
+/* .message-content p {
   margin: 0.5rem 0;
 }
 
@@ -246,7 +250,7 @@ body {
   padding: 0.125rem 0.25rem;
   border-radius: 3px;
   font-size: 0.875rem;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
 }
 
 .message-content pre {
@@ -262,7 +266,7 @@ body {
   background: none;
   padding: 0;
   color: inherit;
-}
+} */
 
 /* Loading indicator inside message bubble */
 .message-loading {
@@ -285,7 +289,9 @@ body {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-text {
