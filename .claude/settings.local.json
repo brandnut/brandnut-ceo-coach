@@ -23,7 +23,9 @@
       "Read(//tmp/ai/packages/**)",
       "WebFetch(domain:x.ant.design)",
       "Bash(curl:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git log:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

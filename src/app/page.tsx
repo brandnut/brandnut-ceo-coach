@@ -30,6 +30,8 @@ export default function ChatPage() {
   const [workflowStatus, setWorkflowStatus] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const currentTaskIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -108,6 +110,33 @@ export default function ChatPage() {
     }
   };
 
+  const handleStop = async () => {
+    // Cancel fetch request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Call Dify stop API
+    if (currentTaskIdRef.current && session?.user?.name) {
+      try {
+        await fetch("/api/chat/stop", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            taskId: currentTaskIdRef.current,
+          }),
+        });
+      } catch (error) {
+        console.error("Stop error:", error);
+      }
+    }
+
+    setIsStreaming(false);
+    setWorkflowStatus("");
+    currentTaskIdRef.current = null;
+    abortControllerRef.current = null;
+  };
+
   const handleSend = async (message: string) => {
     if (!message.trim() || isStreaming) return;
 
@@ -136,6 +165,9 @@ export default function ChatPage() {
       },
     ]);
 
+    // Create AbortController for this request
+    abortControllerRef.current = new AbortController();
+
     try {
       const response = await fetch("/api/chat/messages", {
         method: "POST",
@@ -145,6 +177,7 @@ export default function ChatPage() {
           conversationId: currentConvId,
           files: [],
         }),
+        signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) {
@@ -172,6 +205,11 @@ export default function ChatPage() {
           try {
             const data = JSON.parse(line.slice(6));
 
+            // Capture task_id
+            if (data.task_id && !currentTaskIdRef.current) {
+              currentTaskIdRef.current = data.task_id;
+            }
+
             if (data.event === "message") {
               assistantContent += data.answer;
               setWorkflowStatus("");
@@ -197,7 +235,13 @@ export default function ChatPage() {
           }
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      // Don't show error if aborted by user
+      if (error instanceof Error && error.name === "AbortError") {
+        console.log("Request aborted by user");
+        return;
+      }
+
       console.error("Send error:", error);
       setMessages((prev) =>
         prev.map((msg) =>
@@ -209,6 +253,8 @@ export default function ChatPage() {
     } finally {
       setIsStreaming(false);
       setWorkflowStatus("");
+      currentTaskIdRef.current = null;
+      abortControllerRef.current = null;
     }
   };
 
@@ -286,6 +332,7 @@ export default function ChatPage() {
             value={input}
             onChange={setInput}
             onSubmit={handleSend}
+            onCancel={handleStop}
             loading={isStreaming}
             placeholder="开始提问..."
             autoSize={{ minRows: 1, maxRows: 5 }}
