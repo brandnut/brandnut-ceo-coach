@@ -454,6 +454,7 @@ export default function ChatPage() {
                   showUploadList={false}
                   accept=".pdf,.txt,.doc,.docx,.md,.csv,.xlsx,.xls,.pptx,.ppt"
                   disabled={isStreaming}
+                  multiple
                 >
                   <button
                     type="button"
