@@ -186,12 +186,12 @@ body {
 }
 
 .message.user .message-content {
-  background: #e9e9e980;
-  color: #333;
+  background: hsl(var(--muted) / 0.5);
+  color: hsl(var(--foreground));
 }
 
 .message.assistant .message-content {
-  color: #333;
+  color: hsl(var(--foreground));
   padding: 0;
 }
 

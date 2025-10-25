@@ -82,6 +82,8 @@ export default function ChatPage() {
 
   const loadConversation = async (convId: string) => {
     setCurrentConvId(convId);
+    setInput("");
+    setAttachments([]);
 
     try {
       const response = await fetch(`/api/conversations/${convId}/messages`);
@@ -94,8 +96,11 @@ export default function ChatPage() {
       const history: Message[] = [];
 
       for (const msg of data.data || []) {
-        const userFiles = msg.message_files?.filter((f: any) => f.belongs_to === 'user') || [];
-        const assistantFiles = msg.message_files?.filter((f: any) => f.belongs_to === 'assistant') || [];
+        const userFiles =
+          msg.message_files?.filter((f: any) => f.belongs_to === "user") || [];
+        const assistantFiles =
+          msg.message_files?.filter((f: any) => f.belongs_to === "assistant") ||
+          [];
 
         if (msg.query) {
           history.push({
@@ -211,15 +216,15 @@ export default function ChatPage() {
         id: userMsgId,
         role: "user",
         content: userMessage,
-        message_files: attachments.map(f => ({
+        message_files: attachments.map((f) => ({
           id: f.uid,
           filename: f.name,
           type: f.type,
-          url: f.url || '',
+          url: f.url || "",
           size: f.size,
           mime_type: f.type,
-          transfer_method: 'local_file' as const,
-          belongs_to: 'user' as const,
+          transfer_method: "local_file" as const,
+          belongs_to: "user" as const,
           upload_file_id: f.uploadedId!,
         })),
       },
@@ -371,7 +376,7 @@ export default function ChatPage() {
         </div>
       </div>
 
-      <div className="main">
+      <div className="main overflow-x-hidden">
         <div className="messages" ref={messagesContainerRef}>
           {messages.map((msg, index) => {
             const isLastMessage = index === messages.length - 1;
@@ -429,6 +434,7 @@ export default function ChatPage() {
                 <Attachments
                   items={attachments}
                   onRemove={handleFileRemove}
+                  overflow="scrollX"
                   styles={{
                     upload: { display: "none" },
                     list: { paddingBottom: 0 },
