@@ -281,7 +281,7 @@ export default function ChatPage() {
         </div>
         <button
           onClick={startNewConversation}
-          className="button new-chat-button"
+          className="new-chat-button"
         >
           New Chat
         </button>

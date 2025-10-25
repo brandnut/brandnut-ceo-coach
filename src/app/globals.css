@@ -10,8 +10,8 @@
     --card-foreground: 0 0% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
     --secondary: 0 0% 96.1%;
     --secondary-foreground: 0 0% 9%;
     --muted: 0 0% 96.1%;
@@ -78,16 +78,16 @@ body {
 
 .sidebar {
   width: 260px;
-  background: #2d3748;
-  color: white;
+  background: hsl(var(--muted) / 0.3);
+  color: hsl(var(--foreground));
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #1a202c;
+  border-right: 1px solid hsl(var(--border));
 }
 
 .sidebar-header {
   padding: 1rem;
-  border-bottom: 1px solid #1a202c;
+  border-bottom: 1px solid hsl(var(--border));
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -95,11 +95,29 @@ body {
 
 .user-info {
   font-weight: 600;
+  color: hsl(var(--foreground));
 }
 
 .new-chat-button {
   margin: 1rem;
-  background: #4299e1;
+  padding: 0.75rem 1.5rem;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.new-chat-button:hover:not(:disabled) {
+  background: hsl(var(--primary) / 0.9);
+}
+
+.new-chat-button:disabled {
+  background: hsl(var(--muted));
+  cursor: not-allowed;
 }
 
 .conversations {
@@ -113,19 +131,21 @@ body {
   margin-bottom: 0.25rem;
   border-radius: 6px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
   font-size: 0.875rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: hsl(var(--foreground));
 }
 
 .conversation-item:hover {
-  background: #4a5568;
+  background: hsl(var(--muted) / 0.6);
 }
 
 .conversation-item.active {
-  background: #4299e1;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
 }
 
 .main {
@@ -292,8 +312,8 @@ body {
 
 .button-small {
   padding: 0.5rem 0.75rem;
-  background: #e53e3e;
-  color: white;
+  background: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
   border: none;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -303,7 +323,7 @@ body {
 }
 
 .button-small:hover {
-  background: #c53030;
+  background: hsl(var(--destructive) / 0.9);
 }
 
 .message-loading {
