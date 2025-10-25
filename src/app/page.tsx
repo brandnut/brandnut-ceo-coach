@@ -3,9 +3,14 @@
 import { useState, useEffect, useRef } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Sender } from "@ant-design/x";
+import { Sender, Attachments } from "@ant-design/x";
+import { Upload } from "antd";
+import { PaperClipOutlined } from "@ant-design/icons";
+import type { UploadFile } from "antd";
 import CustomStreamdown from "@/components/CustomStreamdown";
 import { getConversations } from "@/lib/api";
+import { uploadFile, convertToVisionFiles } from "@/lib/file-upload";
+import type { AttachmentFile } from "@/types";
 
 interface Conversation {
   id: string;
@@ -28,6 +33,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [workflowStatus, setWorkflowStatus] = useState<string>("");
+  const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -137,11 +143,62 @@ export default function ChatPage() {
     abortControllerRef.current = null;
   };
 
+  const handleFileUpload = (file: File): boolean => {
+    const uid = `${Date.now()}-${file.name}`;
+
+    // Add file to list with uploading status
+    const newFile: AttachmentFile = {
+      uid,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      status: "uploading",
+      percent: 0,
+      originFileObj: file,
+    };
+
+    setAttachments((prev) => [...prev, newFile]);
+
+    // Start upload
+    uploadFile({
+      file,
+      onProgress: (percent) => {
+        setAttachments((prev) =>
+          prev.map((f) => (f.uid === uid ? { ...f, percent } : f))
+        );
+      },
+      onSuccess: (response) => {
+        setAttachments((prev) =>
+          prev.map((f) =>
+            f.uid === uid
+              ? { ...f, status: "done", percent: 100, uploadedId: response.id }
+              : f
+          )
+        );
+      },
+      onError: (error) => {
+        console.error("Upload error:", error);
+        setAttachments((prev) =>
+          prev.map((f) => (f.uid === uid ? { ...f, status: "error" } : f))
+        );
+      },
+    });
+
+    return false; // Prevent default upload behavior
+  };
+
+  const handleFileRemove = (file: UploadFile) => {
+    setAttachments((prev) => prev.filter((f) => f.uid !== file.uid));
+  };
+
   const handleSend = async (message: string) => {
     if (!message.trim() || isStreaming) return;
 
     const userMessage = message.trim();
     const userMsgId = Date.now().toString();
+
+    // Convert attachments to VisionFile format
+    const visionFiles = convertToVisionFiles(attachments);
 
     setMessages((prev) => [
       ...prev,
@@ -152,6 +209,7 @@ export default function ChatPage() {
       },
     ]);
     setInput("");
+    setAttachments([]); // Clear attachments after sending
     setIsStreaming(true);
     setWorkflowStatus("正在思考");
 
@@ -175,7 +233,7 @@ export default function ChatPage() {
         body: JSON.stringify({
           query: userMessage,
           conversationId: currentConvId,
-          files: [],
+          files: visionFiles,
         }),
         signal: abortControllerRef.current.signal,
       });
@@ -279,10 +337,7 @@ export default function ChatPage() {
             Logout
           </button>
         </div>
-        <button
-          onClick={startNewConversation}
-          className="new-chat-button"
-        >
+        <button onClick={startNewConversation} className="new-chat-button">
           New Chat
         </button>
         <div className="conversations">
@@ -336,6 +391,51 @@ export default function ChatPage() {
             loading={isStreaming}
             placeholder="开始提问..."
             autoSize={{ minRows: 1, maxRows: 5 }}
+            header={
+              attachments.length > 0 && (
+                <Attachments
+                  items={attachments}
+                  onRemove={handleFileRemove}
+                  styles={{
+                    upload: { display: "none" },
+                    list: { paddingBottom: 0 },
+                    item: { background: "none", border: "1px solid #eee" },
+                  }}
+                >
+                  {null}
+                </Attachments>
+              )
+            }
+            actions={(ori, { components }) => (
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "4px" }}
+              >
+                <Upload
+                  beforeUpload={handleFileUpload}
+                  showUploadList={false}
+                  accept=".pdf,.txt,.doc,.docx,.md,.csv,.xlsx,.xls,.pptx,.ppt"
+                  disabled={isStreaming}
+                >
+                  <button
+                    type="button"
+                    disabled={isStreaming}
+                    className="text-muted-foreground transition-all hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{
+                      border: "none",
+                      background: "transparent",
+                      padding: "8px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      height: "32px",
+                    }}
+                  >
+                    <PaperClipOutlined style={{ fontSize: "18px" }} />
+                  </button>
+                </Upload>
+                {ori}
+              </div>
+            )}
           />
         </div>
       </div>

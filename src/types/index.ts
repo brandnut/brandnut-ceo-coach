@@ -1,19 +1,32 @@
-export interface VisionFile {
-  type: 'document'
-  transfer_method: 'local_file'
-  upload_file_id: string
-  url: string
-  name?: string
-  size?: number
+export interface Message {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
 }
 
-export interface FileEntity {
+export interface Conversation {
   id: string
   name: string
+  created_at: number
+}
+
+export interface VisionFile {
+  type: string
+  transfer_method: 'local_file' | 'remote_url'
+  upload_file_id: string
+  url: string
+}
+
+export interface AttachmentFile {
+  uid: string
+  name: string
   size: number
-  progress: number
-  uploadedId?: string
-  file: File
+  type: string
+  status: 'uploading' | 'done' | 'error'
+  percent?: number
+  uploadedId?: string // Dify返回的文件ID
+  url?: string
+  originFileObj?: File
 }
 
 export const ALLOWED_EXTENSIONS = [
