@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git clone:*)",
+      "Read(//tmp/webapp-conversation/**)",
+      "Read(//private/tmp/webapp-conversation/**)",
+      "WebSearch",
+      "WebFetch(domain:docs.dify.ai)",
+      "WebFetch(domain:github.com)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm run dev:*)",
+      "Bash(docker run:*)",
+      "Bash(postgres:16-alpine)",
+      "Bash(docker exec:*)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --app --src-dir)",
+      "Bash(npx create-next-app@latest:*)",
+      "Bash(openssl rand:*)",
+      "Bash(pkill:*)",
+      "Bash(cat:*)",
+      "Bash(npx ai-elements@latest:*)",
+      "Bash(npx shadcn@latest init:*)",
+      "Read(//tmp/ai/packages/**)",
+      "WebFetch(domain:x.ant.design)",
+      "Bash(curl:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

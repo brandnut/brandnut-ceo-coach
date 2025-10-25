@@ -1,11 +1,10 @@
-const API_URL = 'https://api.dify.ai/v1'
-const API_KEY = 'app-cm3DGPtKu82A15UJBULqah2u'
+import { VisionFile } from '@/types'
 
 export interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
-  files?: string[]
+  files?: VisionFile[]
 }
 
 export interface Conversation {
@@ -14,10 +13,48 @@ export interface Conversation {
   updatedAt: number
 }
 
+export async function uploadFile(
+  file: File,
+  onProgress: (percent: number) => void
+): Promise<{ id: string }> {
+  console.log('[uploadFile] Starting upload for:', file.name, file.size)
+  return new Promise((resolve, reject) => {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const xhr = new XMLHttpRequest()
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        const percent = Math.floor((e.loaded / e.total) * 100)
+        onProgress(percent)
+      }
+    }
+
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        try {
+          const response = JSON.parse(xhr.responseText)
+          resolve({ id: response.id })
+        } catch {
+          reject(new Error('Invalid response'))
+        }
+      } else {
+        reject(new Error(`Upload failed: ${xhr.status}`))
+      }
+    }
+
+    xhr.onerror = () => reject(new Error('Network error'))
+
+    xhr.open('POST', '/api/files/upload')
+    xhr.send(formData)
+  })
+}
+
 export async function sendMessage(
   query: string,
-  userId: string,
   conversationId: string | null,
+  files: VisionFile[],
   onChunk: (text: string) => void,
   onEnd: (convId: string, messageId: string) => void,
   onError: (error: string) => void,
@@ -25,18 +62,18 @@ export async function sendMessage(
   onNodeStarted?: (title: string) => void
 ): Promise<void> {
   try {
-    const response = await fetch(`${API_URL}/chat-messages`, {
+    const response = await fetch('/api/chat/messages', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${API_KEY}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        inputs: {},
         query,
-        user: userId,
-        response_mode: 'streaming',
         conversation_id: conversationId || undefined,
+        files: files.map(f => ({
+          type: f.type,
+          transfer_method: f.transfer_method,
+          upload_file_id: f.upload_file_id,
+          url: '',
+        })),
       }),
     })
 
@@ -94,11 +131,9 @@ export async function sendMessage(
   }
 }
 
-export async function getConversations(userId: string): Promise<Conversation[]> {
+export async function getConversations(): Promise<Conversation[]> {
   try {
-    const response = await fetch(`${API_URL}/conversations?user=${userId}`, {
-      headers: { 'Authorization': `Bearer ${API_KEY}` },
-    })
+    const response = await fetch('/api/conversations')
 
     if (!response.ok) return []
 
@@ -113,11 +148,10 @@ export async function getConversations(userId: string): Promise<Conversation[]> 
   }
 }
 
-export async function getMessages(conversationId: string, userId: string): Promise<Message[]> {
+export async function getMessages(conversationId: string): Promise<Message[]> {
   try {
     const response = await fetch(
-      `${API_URL}/messages?conversation_id=${conversationId}&user=${userId}&limit=100`,
-      { headers: { 'Authorization': `Bearer ${API_KEY}` } }
+      `/api/conversations/${conversationId}/messages`
     )
 
     if (!response.ok) return []
@@ -125,13 +159,24 @@ export async function getMessages(conversationId: string, userId: string): Promi
     const data = await response.json()
     const messages: Message[] = []
 
-    // API returns messages in chronological order (oldest first)
     for (const msg of data.data || []) {
       if (msg.query) {
+        const files: VisionFile[] | undefined = msg.message_files?.length > 0
+          ? msg.message_files.map((f: any) => ({
+              type: f.type || 'document',
+              transfer_method: f.transfer_method || 'local_file',
+              upload_file_id: f.id,
+              url: f.url || '',
+              name: f.name,
+              size: f.size,
+            }))
+          : undefined
+
         messages.push({
           id: `${msg.id}-user`,
           role: 'user',
           content: msg.query,
+          files,
         })
       }
       if (msg.answer) {

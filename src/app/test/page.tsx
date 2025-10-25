@@ -49,57 +49,6 @@ export default function Test() {
           </div>
         </section>
 
-        {/* Flex & Grid */}
-        <section className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-2xl font-semibold mb-4">Flex & Grid</h2>
-          <div className="flex justify-between items-center mb-4 bg-gray-100 p-4 rounded">
-            <span>justify-between</span>
-            <span>items-center</span>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-purple-200 p-4 rounded">Grid 1</div>
-            <div className="bg-purple-300 p-4 rounded">Grid 2</div>
-            <div className="bg-purple-400 p-4 rounded">Grid 3</div>
-          </div>
-        </section>
-
-        {/* Hover & States */}
-        <section className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-2xl font-semibold mb-4">Hover & States</h2>
-          <div className="space-x-4">
-            <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700 transition">
-              Hover me
-            </button>
-            <button className="px-4 py-2 bg-green-500 text-white rounded hover:scale-105 transition transform">
-              Hover scale
-            </button>
-            <button className="px-4 py-2 bg-red-500 text-white rounded disabled:opacity-50" disabled>
-              Disabled
-            </button>
-          </div>
-        </section>
-
-        {/* Shadow & Opacity */}
-        <section className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-2xl font-semibold mb-4">Shadow & Opacity</h2>
-          <div className="flex gap-4">
-            <div className="bg-white shadow-sm p-4 rounded">shadow-sm</div>
-            <div className="bg-white shadow-md p-4 rounded">shadow-md</div>
-            <div className="bg-white shadow-lg p-4 rounded">shadow-lg</div>
-            <div className="bg-blue-500 opacity-50 p-4 rounded text-white">opacity-50</div>
-          </div>
-        </section>
-
-        {/* Responsive */}
-        <section className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-2xl font-semibold mb-4">Responsive (resize window)</h2>
-          <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-4 rounded">
-            <p className="text-sm md:text-base lg:text-xl">
-              Responsive text: small on mobile, base on tablet, xl on desktop
-            </p>
-          </div>
-        </section>
-
         {/* Streamdown Classes Test */}
         <section className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-2xl font-semibold mb-4">Streamdown Classes (bg, muted, hover)</h2>
@@ -159,23 +108,36 @@ export default function Test() {
           </div>
         </section>
 
-        {/* Check if undefined classes render */}
+        {/* Table Test */}
         <section className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-2xl font-semibold mb-4 text-red-600">❌ These SHOULD NOT work (undefined)</h2>
+          <h2 className="text-2xl font-semibold mb-4">Table Test (Streamdown styles)</h2>
 
-          <div className="space-y-4">
-            <div className="bg-background p-4 border rounded">
-              If <code>bg-background</code> is NOT defined, this will have no background color
-            </div>
-
-            <div className="bg-muted p-4 rounded">
-              If <code>bg-muted</code> is NOT defined, this will have no background color
-            </div>
-
-            <div className="text-muted-foreground p-4 bg-white rounded border">
-              If <code>text-muted-foreground</code> is NOT defined, this text will be default black
-            </div>
-          </div>
+          <table className="w-full border-collapse border border-border">
+            <thead className="bg-muted/80">
+              <tr className="border-border border-b">
+                <th className="whitespace-nowrap px-4 py-2 text-left font-semibold text-sm">Header 1</th>
+                <th className="whitespace-nowrap px-4 py-2 text-left font-semibold text-sm">Header 2</th>
+                <th className="whitespace-nowrap px-4 py-2 text-left font-semibold text-sm">Header 3</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border bg-muted/40">
+              <tr className="border-border border-b">
+                <td className="px-4 py-2 text-sm">Cell 1</td>
+                <td className="px-4 py-2 text-sm">Cell 2</td>
+                <td className="px-4 py-2 text-sm">Cell 3</td>
+              </tr>
+              <tr className="border-border border-b">
+                <td className="px-4 py-2 text-sm">Cell 4</td>
+                <td className="px-4 py-2 text-sm">Cell 5</td>
+                <td className="px-4 py-2 text-sm">Cell 6</td>
+              </tr>
+              <tr className="border-border border-b">
+                <td className="px-4 py-2 text-sm">Cell 7</td>
+                <td className="px-4 py-2 text-sm">Cell 8</td>
+                <td className="px-4 py-2 text-sm">Cell 9</td>
+              </tr>
+            </tbody>
+          </table>
         </section>
       </div>
     </div>

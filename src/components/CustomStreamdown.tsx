@@ -1,3 +1,5 @@
+'use client'
+
 import { Streamdown } from 'streamdown'
 import { useRef, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -16,18 +18,14 @@ export default function CustomStreamdown({ children }: CustomStreamdownProps) {
     if (!container) return
 
     const addEnhancements = (block: Element) => {
-      // Check if already added
       if (block.querySelector('[data-zoom-button]')) return
 
-      // Find controls container
       const controls = block.querySelector('.flex.items-center')
       if (!controls) return
 
-      // Find existing buttons
       const existingBtn = controls.querySelector('button')
       if (!existingBtn) return
 
-      // Hide Streamdown's download button (we'll replace it with our dropdown)
       const hideOriginalDownloadButton = () => {
         const originalDownloadBtn = block.querySelector('button[title="Download file"]') as HTMLButtonElement
         if (originalDownloadBtn) {
@@ -35,38 +33,28 @@ export default function CustomStreamdown({ children }: CustomStreamdownProps) {
         }
       }
 
-      // Store the code - we'll get it from the copy button instead
       let mermaidCode = ''
 
-      // Get code from copy button (more reliable than download button)
       const captureCodeFromCopyButton = () => {
         const copyBtn = Array.from(controls.querySelectorAll('button')).find(
           (btn) => btn.getAttribute('title')?.toLowerCase().includes('copy')
         )
-        if (!copyBtn) {
-          console.log('[captureCode] Copy button not found')
-          return false
-        }
+        if (!copyBtn) return false
 
-        // Intercept clipboard write to capture the code
         const originalWriteText = navigator.clipboard.writeText.bind(navigator.clipboard)
         let intercepting = true
 
         navigator.clipboard.writeText = async function(text: string) {
           if (intercepting) {
             mermaidCode = text
-            console.log('[captureCode] Captured code length:', text.length)
             intercepting = false
-            // Don't actually copy
             return Promise.resolve()
           }
           return originalWriteText(text)
         }
 
-        // Trigger the copy button
         copyBtn.dispatchEvent(new MouseEvent('click', { bubbles: false }))
 
-        // Restore writeText after a tick
         setTimeout(() => {
           navigator.clipboard.writeText = originalWriteText
         }, 100)
@@ -74,79 +62,52 @@ export default function CustomStreamdown({ children }: CustomStreamdownProps) {
         return true
       }
 
-      // Get the mermaid code
       const getMermaidCode = () => {
         return mermaidCode
       }
 
-      // Hide original download button immediately
       hideOriginalDownloadButton()
 
-      // Download as image function
       const downloadAsImage = async (format: 'png' | 'jpeg') => {
-        console.log('[downloadAsImage] Starting download as', format)
-
         const chartDiv = block.querySelector('[aria-label="Mermaid chart"]')
         const svg = chartDiv?.querySelector('svg')
 
-        if (!svg) {
-          console.error('[downloadAsImage] No SVG found!')
-          return
-        }
+        if (!svg) return
 
         try {
-          // Clone SVG to avoid modifying the original
           const svgClone = svg.cloneNode(true) as SVGElement
 
-          // Get dimensions
           const bbox = svg.getBoundingClientRect()
           const width = bbox.width
           const height = bbox.height
 
-          // Set explicit dimensions on clone
           svgClone.setAttribute('width', width.toString())
           svgClone.setAttribute('height', height.toString())
 
-          // Serialize SVG to string
           const svgData = new XMLSerializer().serializeToString(svgClone)
 
-          // Create data URL with proper encoding
           const svgDataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)))
 
-          // Create canvas
           const canvas = document.createElement('canvas')
-          const scale = 10 // 10x for very high quality
+          const scale = 10
           canvas.width = width * scale
           canvas.height = height * scale
 
           const ctx = canvas.getContext('2d')
-          if (!ctx) {
-            console.error('[downloadAsImage] No canvas context!')
-            return
-          }
+          if (!ctx) return
 
-          // Create image from SVG data URL
           const img = new Image()
 
           img.onload = () => {
-            console.log('[downloadAsImage] Image loaded successfully')
-
-            // Fill white background for JPEG
             if (format === 'jpeg') {
               ctx.fillStyle = 'white'
               ctx.fillRect(0, 0, canvas.width, canvas.height)
             }
 
-            // Draw image to canvas
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
 
-            // Convert canvas to blob and download
             canvas.toBlob((blob) => {
-              if (!blob) {
-                console.error('[downloadAsImage] Failed to create blob!')
-                return
-              }
-              console.log('[downloadAsImage] Blob created, downloading...')
+              if (!blob) return
               const downloadUrl = URL.createObjectURL(blob)
               const a = document.createElement('a')
               a.href = downloadUrl
@@ -155,23 +116,15 @@ export default function CustomStreamdown({ children }: CustomStreamdownProps) {
               a.click()
               document.body.removeChild(a)
               URL.revokeObjectURL(downloadUrl)
-              console.log('[downloadAsImage] Download triggered!')
             }, `image/${format}`, 0.95)
           }
 
-          img.onerror = (e) => {
-            console.error('[downloadAsImage] Image load failed:', e)
-          }
-
           img.src = svgDataUrl
-          console.log('[downloadAsImage] Image src set (data URL), waiting for load...')
-
         } catch (error) {
           console.error('[downloadAsImage] Error:', error)
         }
       }
 
-      // Create our own download dropdown button
       const createDownloadDropdown = () => {
         if (block.querySelector('[data-mermaid-dropdown]')) return
 
@@ -188,7 +141,6 @@ export default function CustomStreamdown({ children }: CustomStreamdownProps) {
         const dropdownMenu = document.createElement('div')
         dropdownMenu.className = 'absolute top-full right-0 z-10 mt-1 min-w-[120px] rounded-md border border-border bg-background shadow-lg hidden'
 
-        // Menu items
         const menuItems = [
           { label: 'MMD', format: 'mmd' },
           { label: 'PNG', format: 'png' },
@@ -203,11 +155,8 @@ export default function CustomStreamdown({ children }: CustomStreamdownProps) {
             e.stopPropagation()
             dropdownMenu.classList.add('hidden')
 
-            console.log('[Menu item] Clicked:', format)
-
             if (format === 'mmd') {
               const code = getMermaidCode()
-              console.log('[Menu item] MMD code length:', code.length)
               const blob = new Blob([code], { type: 'text/plain' })
               const url = URL.createObjectURL(blob)
               const a = document.createElement('a')
@@ -217,7 +166,6 @@ export default function CustomStreamdown({ children }: CustomStreamdownProps) {
               a.click()
               document.body.removeChild(a)
               URL.revokeObjectURL(url)
-              console.log('[Menu item] MMD download triggered')
             } else {
               await downloadAsImage(format as 'png' | 'jpeg')
             }
@@ -225,13 +173,11 @@ export default function CustomStreamdown({ children }: CustomStreamdownProps) {
           dropdownMenu.appendChild(item)
         })
 
-        // Download button onclick to toggle dropdown
         downloadBtn.onclick = (e) => {
           e.stopPropagation()
           dropdownMenu.classList.toggle('hidden')
         }
 
-        // Close dropdown when clicking outside
         const closeDropdown = (e: Event) => {
           if (!dropdownWrapper.contains(e.target as Node)) {
             dropdownMenu.classList.add('hidden')
@@ -239,14 +185,12 @@ export default function CustomStreamdown({ children }: CustomStreamdownProps) {
         }
         document.addEventListener('click', closeDropdown)
 
-        // Assemble dropdown
         dropdownWrapper.appendChild(downloadBtn)
         dropdownWrapper.appendChild(dropdownMenu)
 
         return dropdownWrapper
       }
 
-      // Create zoom button
       const zoomBtn = document.createElement('button')
       zoomBtn.className = existingBtn.className
       zoomBtn.title = 'Zoom'
@@ -270,15 +214,12 @@ export default function CustomStreamdown({ children }: CustomStreamdownProps) {
         setModalOpen(true)
       }
 
-      // Try to capture code from copy button (if it exists)
       captureCodeFromCopyButton()
 
-      // Add our buttons to controls
       const downloadDropdown = createDownloadDropdown()
       controls.appendChild(downloadDropdown)
       controls.appendChild(zoomBtn)
 
-      // Watch for original download button to appear, then hide it
       const controlsObserver = new MutationObserver(() => {
         hideOriginalDownloadButton()
       })
@@ -289,11 +230,9 @@ export default function CustomStreamdown({ children }: CustomStreamdownProps) {
       })
     }
 
-    // Find all Mermaid blocks
     const mermaidBlocks = container.querySelectorAll('[data-streamdown="mermaid-block"]')
     mermaidBlocks.forEach(addEnhancements)
 
-    // Watch for new Mermaid blocks (streaming)
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
