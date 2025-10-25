@@ -94,11 +94,15 @@ export default function ChatPage() {
       const history: Message[] = [];
 
       for (const msg of data.data || []) {
+        const userFiles = msg.message_files?.filter((f: any) => f.belongs_to === 'user') || [];
+        const assistantFiles = msg.message_files?.filter((f: any) => f.belongs_to === 'assistant') || [];
+
         if (msg.query) {
           history.push({
             id: `${msg.id}-user`,
             role: "user",
             content: msg.query,
+            message_files: userFiles,
           });
         }
         if (msg.answer) {
@@ -106,6 +110,7 @@ export default function ChatPage() {
             id: msg.id,
             role: "assistant",
             content: msg.answer,
+            message_files: assistantFiles,
           });
         }
       }
@@ -206,6 +211,17 @@ export default function ChatPage() {
         id: userMsgId,
         role: "user",
         content: userMessage,
+        message_files: attachments.map(f => ({
+          id: f.uid,
+          filename: f.name,
+          type: f.type,
+          url: f.url || '',
+          size: f.size,
+          mime_type: f.type,
+          transfer_method: 'local_file' as const,
+          belongs_to: 'user' as const,
+          upload_file_id: f.uploadedId!,
+        })),
       },
     ]);
     setInput("");
@@ -365,6 +381,23 @@ export default function ChatPage() {
             return (
               <div key={msg.id} className={`message ${msg.role}`}>
                 <div className="message-content">
+                  {msg.message_files && msg.message_files.length > 0 && (
+                    <div style={{ marginBottom: "8px" }}>
+                      {msg.message_files.map((file) => (
+                        <Attachments.FileCard
+                          key={file.id}
+                          item={{
+                            uid: file.id,
+                            name: file.filename,
+                            size: file.size,
+                            type: file.mime_type,
+                            status: "done",
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+
                   {showLoading && workflowStatus && (
                     <div className="message-loading">
                       <span className="spinner"></span>

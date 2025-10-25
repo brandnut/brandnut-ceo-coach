@@ -2,12 +2,25 @@ export interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
+  message_files?: MessageFile[]
 }
 
 export interface Conversation {
   id: string
   name: string
   created_at: number
+}
+
+export interface MessageFile {
+  id: string
+  filename: string
+  type: string
+  url: string
+  size: number
+  mime_type: string
+  transfer_method: 'local_file' | 'remote_url'
+  belongs_to: 'user' | 'assistant'
+  upload_file_id: string
 }
 
 export interface VisionFile {
