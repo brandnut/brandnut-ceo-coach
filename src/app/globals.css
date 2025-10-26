@@ -186,7 +186,7 @@ body {
 }
 
 .message.user .message-content {
-  background: hsl(var(--muted) / 0.5);
+  background: hsl(var(--muted));
   color: hsl(var(--foreground));
 }
 

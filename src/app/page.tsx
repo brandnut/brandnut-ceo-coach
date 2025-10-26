@@ -204,6 +204,13 @@ export default function ChatPage() {
   const handleSend = async (message: string) => {
     if (!message.trim() || isStreaming) return;
 
+    // Check if any files are still uploading
+    const hasUploadingFiles = attachments.some(f => f.status === 'uploading');
+    if (hasUploadingFiles) {
+      console.warn("Cannot send while files are uploading");
+      return;
+    }
+
     const userMessage = message.trim();
     const userMsgId = Date.now().toString();
 
@@ -260,7 +267,9 @@ export default function ChatPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to send message");
+        const errorText = await response.text();
+        console.error("API error:", errorText);
+        throw new Error(errorText || "Failed to send message");
       }
 
       const reader = response.body?.getReader();
@@ -429,6 +438,7 @@ export default function ChatPage() {
             loading={isStreaming}
             placeholder="开始提问..."
             autoSize={{ minRows: 1, maxRows: 5 }}
+            rootClassName="overflow-x-hidden"
             header={
               attachments.length > 0 && (
                 <Attachments
