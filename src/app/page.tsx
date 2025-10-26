@@ -84,6 +84,7 @@ export default function ChatPage() {
     setCurrentConvId(convId);
     setInput("");
     setAttachments([]);
+    setMessages([]);
 
     try {
       const response = await fetch(`/api/conversations/${convId}/messages`);
