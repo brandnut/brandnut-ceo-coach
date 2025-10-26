@@ -139,7 +139,7 @@ export async function sendMessage(
 
 export async function getConversations(
   lastId?: string,
-  limit: number = 2
+  limit: number = 20
 ): Promise<ConversationsResponse> {
   try {
     const params = new URLSearchParams({ limit: limit.toString() })
@@ -165,6 +165,18 @@ export async function getConversations(
     }
   } catch {
     return { conversations: [], hasMore: false, limit: 20 }
+  }
+}
+
+export async function deleteConversation(conversationId: string): Promise<boolean> {
+  try {
+    const response = await fetch(`/api/conversations/${conversationId}`, {
+      method: 'DELETE',
+    })
+
+    return response.ok
+  } catch {
+    return false
   }
 }
 

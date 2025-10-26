@@ -5,10 +5,10 @@ import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Sender, Attachments, Conversations } from "@ant-design/x";
 import { Upload } from "antd";
-import { PaperClipOutlined } from "@ant-design/icons";
+import { PaperClipOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { UploadFile } from "antd";
 import CustomStreamdown from "@/components/CustomStreamdown";
-import { getConversations } from "@/lib/api";
+import { getConversations, deleteConversation } from "@/lib/api";
 import { uploadFile, convertToVisionFiles } from "@/lib/file-upload";
 import type { AttachmentFile } from "@/types";
 
@@ -95,6 +95,19 @@ export default function ChatPage() {
     }
 
     setHasMore(response.hasMore);
+  };
+
+  const handleDeleteConversation = async (conversationId: string) => {
+    const success = await deleteConversation(conversationId);
+    if (success) {
+      // Remove from local state
+      setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+      // If deleting current conversation, clear it
+      if (currentConvId === conversationId) {
+        setCurrentConvId(null);
+        setMessages([]);
+      }
+    }
   };
 
   const startNewConversation = () => {
@@ -408,6 +421,17 @@ export default function ChatPage() {
             }))}
             activeKey={currentConvId || undefined}
             onActiveChange={(key) => loadConversation(key)}
+            menu={(conversation) => ({
+              items: [
+                {
+                  key: 'delete',
+                  label: '删除',
+                  icon: <DeleteOutlined />,
+                  danger: true,
+                  onClick: () => handleDeleteConversation(conversation.key as string),
+                },
+              ],
+            })}
           />
           {hasMore && (
             <button

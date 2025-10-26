@@ -25,7 +25,13 @@
       "Bash(curl:*)",
       "Bash(git add:*)",
       "Bash(git log:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Read(//private/tmp/**)",
+      "Read(//tmp/x/components/attachments/**)",
+      "Read(//tmp/x/components/sender/**)",
+      "Bash(git reset:*)",
+      "Bash(lsof:*)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": [],
     "ask": []
