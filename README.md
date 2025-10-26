@@ -126,6 +126,14 @@ DIFY_API_URL="https://api.dify.ai/v1"
 DIFY_API_KEY="your-api-key"
 ```
 
+### LlamaIndex Knowledge Base
+Add these variables to `.env.local` to enable the document count proxy:
+```env
+LLAMAINDEX_API_BASE_URL="https://api.cloud.llamaindex.ai/api/v1" # optional override
+LLAMAINDEX_API_KEY="your-llamaindex-token"
+LLAMAINDEX_PIPELINE_ID="e44456d9-6604-4d13-ba5d-8916d0aa398c" # used for /files2
+```
+
 ### Tailwind CSS
 The app uses a custom design system with CSS variables. See `src/app/globals.css` for color definitions:
 

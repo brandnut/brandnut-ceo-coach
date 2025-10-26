@@ -4,8 +4,13 @@ import { useState, useEffect, useRef } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Sender, Attachments, Conversations } from "@ant-design/x";
-import { Upload } from "antd";
-import { PaperClipOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Popover, Upload } from "antd";
+import {
+  PaperClipOutlined,
+  DeleteOutlined,
+  QuestionCircleOutlined,
+} from "@ant-design/icons";
+import TutorialModal from "@/components/TutorialModal";
 import type { UploadFile } from "antd";
 import CustomStreamdown from "@/components/CustomStreamdown";
 import { getConversations, deleteConversation } from "@/lib/api";
@@ -35,6 +40,11 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [workflowStatus, setWorkflowStatus] = useState<string>("");
+  const [docCountLabel, setDocCountLabel] = useState<string | null>(null);
+  const [docFiles, setDocFiles] = useState<
+    Array<{ name?: string; indexed_page_count?: number }>
+  >([]);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -50,6 +60,39 @@ export default function ChatPage() {
       loadConversations();
     }
   }, [status, router]);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+
+    const fetchDocumentCount = async () => {
+      try {
+        const response = await fetch("/api/knowledge/documents");
+        if (!response.ok) {
+          throw new Error("Request failed");
+        }
+        const data = await response.json();
+        const files = Array.isArray(data?.files)
+          ? data.files
+          : Array.isArray(data)
+          ? data
+          : [];
+        setDocFiles(files);
+        const count =
+          typeof data?.total_count === "number"
+            ? data.total_count
+            : Array.isArray(files)
+            ? files.length
+            : 0;
+        setDocCountLabel(String(count));
+      } catch (error) {
+        console.error("Document count fetch error:", error);
+        setDocFiles([]);
+        setDocCountLabel(null);
+      }
+    };
+
+    fetchDocumentCount();
+  }, [status]);
 
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -363,7 +406,9 @@ export default function ChatPage() {
             } else if (data.event === "node_started") {
               setWorkflowStatus(data.data?.title || "正在思考");
             } else if (data.event === "agent_log") {
-              const queryMatch = payload.match(/"query":("(?:(?:\\.)|[^"\\])*")/);
+              const queryMatch = payload.match(
+                /"query":("(?:(?:\\.)|[^"\\])*")/
+              );
               if (!queryMatch?.[1]) {
                 continue; // Skip agent_log events that don't include a query field
               }
@@ -426,8 +471,43 @@ export default function ChatPage() {
             Logout
           </button>
         </div>
+        {/* {docCountLabel && docFiles.length > 0 && (
+          <Popover
+            placement="bottom"
+            trigger={["hover", "click"]}
+            arrow={false}
+            styles={{
+              root: {
+                width: "240px",
+              },
+            }}
+            content={
+              <div className="max-h-80 overflow-y-auto break-words space-y-4">
+                {docFiles.map((file, index) => (
+                  <div
+                    key={`${file.name || "file"}-${index}`}
+                    className="text-xs"
+                  >
+                    <div className="text-foreground">
+                      {file.name || "未命名"}
+                    </div>
+                    {typeof file.indexed_page_count === "number" && (
+                      <div className="text-muted-foreground/80">
+                        {file.indexed_page_count} 页
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            }
+          >
+            <div className="mt-2 px-1 text-xs text-center text-muted-foreground cursor-pointer select-none">
+              知识库文档：{docCountLabel}
+            </div>
+          </Popover>
+        )} */}
         <button onClick={startNewConversation} className="new-chat-button">
-          New Chat
+          新建对话
         </button>
         <div className="flex-1 overflow-y-auto">
           <Conversations
@@ -440,11 +520,12 @@ export default function ChatPage() {
             menu={(conversation) => ({
               items: [
                 {
-                  key: 'delete',
-                  label: '删除',
+                  key: "delete",
+                  label: "删除",
                   icon: <DeleteOutlined />,
                   danger: true,
-                  onClick: () => handleDeleteConversation(conversation.key as string),
+                  onClick: () =>
+                    handleDeleteConversation(conversation.key as string),
                 },
               ],
             })}
@@ -458,6 +539,16 @@ export default function ChatPage() {
               {isLoadingMore ? "加载中..." : "加载更多"}
             </button>
           )}
+        </div>
+        <div className="flex justify-end px-2 pb-3">
+          <button
+            type="button"
+            onClick={() => setIsHelpOpen(true)}
+            className="p-2 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="使用教程"
+          >
+            <QuestionCircleOutlined />
+          </button>
         </div>
       </div>
 
@@ -577,8 +668,53 @@ export default function ChatPage() {
               </div>
             )}
           />
+          <div className="mt-3 px-1 text-xs text-center text-muted-foreground/60 cursor-pointer select-none">
+            {docCountLabel && docFiles.length > 0 ? (
+              <div>
+                <span className="inline">基于</span>
+                <Popover
+                  placement="top"
+                  trigger={["hover", "click"]}
+                  arrow={true}
+                  styles={{
+                    root: {
+                      width: "300px",
+                    },
+                  }}
+                  content={
+                    <div className="max-h-80 overflow-y-auto break-words space-y-3">
+                      {docFiles.map((file, index) => (
+                        <div
+                          key={`${file.name || "file"}-${index}`}
+                          className="text-xs"
+                        >
+                          <div className="text-foreground">
+                            {file.name || "未命名"}
+                          </div>
+                          {typeof file.indexed_page_count === "number" && (
+                            <div className="text-muted-foreground/80">
+                              {file.indexed_page_count} 页
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  }
+                >
+                  <span className="text-muted-foreground/60 hover:text-muted-foreground">
+                    {" "}
+                    {docCountLabel} 个知识库文档
+                  </span>
+                </Popover>
+                <span className="inline">和互联网搜索，内容由 AI 生成</span>
+              </div>
+            ) : (
+              <span className="inline">内容由 AI 生成</span>
+            )}
+          </div>
         </div>
       </div>
+      <TutorialModal open={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
     </div>
   );
 }
