@@ -34,10 +34,12 @@ export default function ChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [workflowStatus, setWorkflowStatus] = useState<string>("");
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
+  const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const currentTaskIdRef = useRef<string | null>(null);
+  const shouldForceScrollRef = useRef(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -57,7 +59,7 @@ export default function ChatPage() {
       container.scrollHeight - container.scrollTop - container.clientHeight <
       threshold;
 
-    const shouldScroll = (atTop && messages.length > 0) || nearBottom;
+    const shouldScroll = shouldForceScrollRef.current || (atTop && messages.length > 0) || nearBottom;
 
     if (shouldScroll) {
       setTimeout(() => {
@@ -65,6 +67,7 @@ export default function ChatPage() {
           behavior: "auto",
           block: "end",
         });
+        shouldForceScrollRef.current = false;
       }, 50);
     }
   }, [messages]);
@@ -85,6 +88,7 @@ export default function ChatPage() {
     setInput("");
     setAttachments([]);
     setMessages([]);
+    setIsLoadingConversation(true);
 
     try {
       const response = await fetch(`/api/conversations/${convId}/messages`);
@@ -124,6 +128,8 @@ export default function ChatPage() {
       setMessages(history);
     } catch {
       setMessages([]);
+    } finally {
+      setIsLoadingConversation(false);
     }
   };
 
@@ -217,6 +223,9 @@ export default function ChatPage() {
 
     // Convert attachments to VisionFile format
     const visionFiles = convertToVisionFiles(attachments);
+
+    // Force scroll to bottom when sending new message
+    shouldForceScrollRef.current = true;
 
     setMessages((prev) => [
       ...prev,
@@ -388,46 +397,60 @@ export default function ChatPage() {
 
       <div className="main overflow-x-hidden">
         <div className="messages" ref={messagesContainerRef}>
-          {messages.map((msg, index) => {
-            const isLastMessage = index === messages.length - 1;
-            const showLoading =
-              msg.role === "assistant" && isStreaming && isLastMessage;
+          {isLoadingConversation ? (
+            <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
+              <span className="spinner-large"></span>
+              <span className="text-base font-medium">加载对话中...</span>
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
+              <span className="text-5xl">👋</span>
+              <span className="text-base font-medium">开始新对话</span>
+            </div>
+          ) : (
+            <>
+              {messages.map((msg, index) => {
+                const isLastMessage = index === messages.length - 1;
+                const showLoading =
+                  msg.role === "assistant" && isStreaming && isLastMessage;
 
-            return (
-              <div key={msg.id} className={`message ${msg.role}`}>
-                <div className="message-content">
-                  {msg.message_files && msg.message_files.length > 0 && (
-                    <div style={{ marginBottom: "8px" }}>
-                      {msg.message_files.map((file) => (
-                        <Attachments.FileCard
-                          key={file.id}
-                          item={{
-                            uid: file.id,
-                            name: file.filename,
-                            size: file.size,
-                            type: file.mime_type,
-                            status: "done",
-                          }}
-                        />
-                      ))}
+                return (
+                  <div key={msg.id} className={`message ${msg.role}`}>
+                    <div className="message-content">
+                      {msg.message_files && msg.message_files.length > 0 && (
+                        <div style={{ marginBottom: "8px" }}>
+                          {msg.message_files.map((file) => (
+                            <Attachments.FileCard
+                              key={file.id}
+                              item={{
+                                uid: file.id,
+                                name: file.filename,
+                                size: file.size,
+                                type: file.mime_type,
+                                status: "done",
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {showLoading && workflowStatus && (
+                        <div className="message-loading">
+                          <span className="spinner"></span>
+                          <span className="loading-text">{workflowStatus}</span>
+                        </div>
+                      )}
+
+                      <div className="markdown-body">
+                        <CustomStreamdown>{msg.content}</CustomStreamdown>
+                      </div>
                     </div>
-                  )}
-
-                  {showLoading && workflowStatus && (
-                    <div className="message-loading">
-                      <span className="spinner"></span>
-                      <span className="loading-text">{workflowStatus}</span>
-                    </div>
-                  )}
-
-                  <div className="markdown-body">
-                    <CustomStreamdown>{msg.content}</CustomStreamdown>
                   </div>
-                </div>
-              </div>
-            );
-          })}
-          <div ref={messagesEndRef} />
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </>
+          )}
         </div>
 
         <div className="input-container">
