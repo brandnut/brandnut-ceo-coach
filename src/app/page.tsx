@@ -333,8 +333,10 @@ export default function ChatPage() {
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
 
+          const payload = line.slice(6);
+
           try {
-            const data = JSON.parse(line.slice(6));
+            const data = JSON.parse(payload);
 
             // Capture task_id
             if (data.task_id && !currentTaskIdRef.current) {
@@ -360,6 +362,20 @@ export default function ChatPage() {
               setWorkflowStatus("正在思考");
             } else if (data.event === "node_started") {
               setWorkflowStatus(data.data?.title || "正在思考");
+            } else if (data.event === "agent_log") {
+              const queryMatch = payload.match(/"query":("(?:(?:\\.)|[^"\\])*")/);
+              if (!queryMatch?.[1]) {
+                continue; // Skip agent_log events that don't include a query field
+              }
+
+              try {
+                const extractedQuery = JSON.parse(queryMatch[1]).trim();
+                if (extractedQuery) {
+                  setWorkflowStatus(`正在检索：${extractedQuery}`);
+                }
+              } catch (parseError) {
+                // Ignore malformed query payloads
+              }
             }
           } catch (e) {
             // Skip invalid JSON
