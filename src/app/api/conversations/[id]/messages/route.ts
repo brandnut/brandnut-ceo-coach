@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: NextRequest, context: any) {
   const session = await auth()
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
-    const { id } = params
+    const { id } = (context?.params || {}) as { id: string }
 
     const response = await fetch(
       `${process.env.DIFY_API_URL}/messages?conversation_id=${id}&user=${session.user.name}&limit=100`,

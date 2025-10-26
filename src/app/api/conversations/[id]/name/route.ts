@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(req: NextRequest, context: any) {
   const session = await auth()
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -12,7 +9,7 @@ export async function POST(
 
   try {
     const { name } = await req.json()
-    const { id } = params
+    const { id } = (context?.params || {}) as { id: string }
 
     const response = await fetch(
       `${process.env.DIFY_API_URL}/conversations/${id}/name`,
