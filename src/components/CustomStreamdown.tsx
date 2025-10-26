@@ -239,7 +239,9 @@ export default function CustomStreamdown({ children }: CustomStreamdownProps) {
       captureCodeFromCopyButton();
 
       const downloadDropdown = createDownloadDropdown();
-      controls.appendChild(downloadDropdown);
+      if (downloadDropdown) {
+        controls.appendChild(downloadDropdown);
+      }
       controls.appendChild(zoomBtn);
 
       const controlsObserver = new MutationObserver(() => {

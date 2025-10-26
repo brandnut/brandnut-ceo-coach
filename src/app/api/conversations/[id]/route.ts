@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import type { RouteContext } from '@/types/routes'
 
 export async function DELETE(req: NextRequest, context: any) {
   const session = await auth()
@@ -8,7 +9,7 @@ export async function DELETE(req: NextRequest, context: any) {
   }
 
   try {
-    const { id } = (context?.params || {}) as { id: string }
+    const { id } = await (context as { params: { id: string } } | { params: Promise<{ id: string }> }).params
 
     // First, verify that this conversation belongs to the user
     const listResponse = await fetch(

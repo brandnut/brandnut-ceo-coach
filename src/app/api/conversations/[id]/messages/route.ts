@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import type { RouteContext } from '@/types/routes'
 
 export async function GET(req: NextRequest, context: any) {
   const session = await auth()
@@ -8,7 +9,7 @@ export async function GET(req: NextRequest, context: any) {
   }
 
   try {
-    const { id } = (context?.params || {}) as { id: string }
+    const { id } = await (context as { params: { id: string } } | { params: Promise<{ id: string }> }).params
 
     const response = await fetch(
       `${process.env.DIFY_API_URL}/messages?conversation_id=${id}&user=${session.user.name}&limit=100`,

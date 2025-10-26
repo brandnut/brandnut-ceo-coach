@@ -12,6 +12,7 @@ import {
 } from "@ant-design/icons";
 import TutorialModal from "@/components/TutorialModal";
 import type { UploadFile } from "antd";
+import type { Message as AppMessage } from "@/types";
 import CustomStreamdown from "@/components/CustomStreamdown";
 import { getConversations, deleteConversation } from "@/lib/api";
 import { uploadFile, convertToVisionFiles } from "@/lib/file-upload";
@@ -23,11 +24,7 @@ interface Conversation {
   updatedAt: number;
 }
 
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-}
+// Use shared Message type (with message_files) from src/types
 
 export default function ChatPage() {
   const { data: session, status } = useSession();
@@ -36,7 +33,7 @@ export default function ChatPage() {
   const [currentConvId, setCurrentConvId] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<AppMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [workflowStatus, setWorkflowStatus] = useState<string>("");
@@ -174,7 +171,7 @@ export default function ChatPage() {
       }
 
       const data = await response.json();
-      const history: Message[] = [];
+      const history: AppMessage[] = [];
 
       for (const msg of data.data || []) {
         const userFiles =
@@ -623,7 +620,18 @@ export default function ChatPage() {
             header={
               attachments.length > 0 && (
                 <Attachments
-                  items={attachments}
+                  items={
+                    (
+                      attachments.map((f) => ({
+                        uid: f.uid,
+                        name: f.name,
+                        size: f.size,
+                        type: f.type,
+                        status: f.status as UploadFile['status'],
+                        url: f.url,
+                      })) as UploadFile[]
+                    )
+                  }
                   onRemove={handleFileRemove}
                   overflow="scrollX"
                   styles={{
@@ -632,7 +640,7 @@ export default function ChatPage() {
                     item: { background: "none", border: "1px solid #eee" },
                   }}
                 >
-                  {null}
+                  <></>
                 </Attachments>
               )
             }

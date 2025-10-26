@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import type { RouteContext } from '@/types/routes'
 
 export async function POST(req: NextRequest, context: any) {
   const session = await auth()
@@ -9,7 +10,7 @@ export async function POST(req: NextRequest, context: any) {
 
   try {
     const { name } = await req.json()
-    const { id } = (context?.params || {}) as { id: string }
+    const { id } = await (context as { params: { id: string } } | { params: Promise<{ id: string }> }).params
 
     const response = await fetch(
       `${process.env.DIFY_API_URL}/conversations/${id}/name`,
