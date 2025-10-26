@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Sender, Attachments } from "@ant-design/x";
+import { Sender, Attachments, Conversations } from "@ant-design/x";
 import { Upload } from "antd";
 import { PaperClipOutlined } from "@ant-design/icons";
 import type { UploadFile } from "antd";
@@ -29,6 +29,8 @@ export default function ChatPage() {
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConvId, setCurrentConvId] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -59,7 +61,10 @@ export default function ChatPage() {
       container.scrollHeight - container.scrollTop - container.clientHeight <
       threshold;
 
-    const shouldScroll = shouldForceScrollRef.current || (atTop && messages.length > 0) || nearBottom;
+    const shouldScroll =
+      shouldForceScrollRef.current ||
+      (atTop && messages.length > 0) ||
+      nearBottom;
 
     if (shouldScroll) {
       setTimeout(() => {
@@ -72,9 +77,24 @@ export default function ChatPage() {
     }
   }, [messages]);
 
-  const loadConversations = async () => {
-    const convs = await getConversations();
-    setConversations(convs.sort((a, b) => b.updatedAt - a.updatedAt));
+  const loadConversations = async (append = false) => {
+    const lastId =
+      append && conversations.length > 0
+        ? conversations[conversations.length - 1].id
+        : undefined;
+
+    if (append) setIsLoadingMore(true);
+
+    const response = await getConversations(lastId);
+
+    if (append) {
+      setConversations((prev) => [...prev, ...response.conversations]);
+      setIsLoadingMore(false);
+    } else {
+      setConversations(response.conversations);
+    }
+
+    setHasMore(response.hasMore);
   };
 
   const startNewConversation = () => {
@@ -212,7 +232,7 @@ export default function ChatPage() {
     if (!message.trim() || isStreaming) return;
 
     // Check if any files are still uploading
-    const hasUploadingFiles = attachments.some(f => f.status === 'uploading');
+    const hasUploadingFiles = attachments.some((f) => f.status === "uploading");
     if (hasUploadingFiles) {
       console.warn("Cannot send while files are uploading");
       return;
@@ -380,18 +400,24 @@ export default function ChatPage() {
         <button onClick={startNewConversation} className="new-chat-button">
           New Chat
         </button>
-        <div className="conversations">
-          {conversations.map((conv) => (
-            <div
-              key={conv.id}
-              className={`conversation-item ${
-                conv.id === currentConvId ? "active" : ""
-              }`}
-              onClick={() => loadConversation(conv.id)}
+        <div className="flex-1 overflow-y-auto">
+          <Conversations
+            items={conversations.map((conv) => ({
+              key: conv.id,
+              label: conv.name,
+            }))}
+            activeKey={currentConvId || undefined}
+            onActiveChange={(key) => loadConversation(key)}
+          />
+          {hasMore && (
+            <button
+              onClick={() => loadConversations(true)}
+              disabled={isLoadingMore}
+              className="w-full pl-[20px] pr-3 pb-2 text-left text-sm text-muted-foreground/60 bg-transparent border-none cursor-pointer transition-colors hover:text-foreground disabled:text-muted-foreground disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {conv.name}
-            </div>
-          ))}
+              {isLoadingMore ? "加载中..." : "加载更多"}
+            </button>
+          )}
         </div>
       </div>
 

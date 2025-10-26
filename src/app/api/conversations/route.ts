@@ -8,8 +8,20 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const searchParams = req.nextUrl.searchParams
+    const lastId = searchParams.get('last_id') || ''
+    const limit = searchParams.get('limit') || '20'
+
+    const params = new URLSearchParams({
+      user: session.user.name,
+      limit,
+    })
+    if (lastId) {
+      params.append('last_id', lastId)
+    }
+
     const response = await fetch(
-      `${process.env.DIFY_API_URL}/conversations?user=${session.user.name}`,
+      `${process.env.DIFY_API_URL}/conversations?${params}`,
       {
         headers: {
           Authorization: `Bearer ${process.env.DIFY_API_KEY}`,

@@ -13,6 +13,12 @@ export interface Conversation {
   updatedAt: number
 }
 
+export interface ConversationsResponse {
+  conversations: Conversation[]
+  hasMore: boolean
+  limit: number
+}
+
 export async function uploadFile(
   file: File,
   onProgress: (percent: number) => void
@@ -131,20 +137,34 @@ export async function sendMessage(
   }
 }
 
-export async function getConversations(): Promise<Conversation[]> {
+export async function getConversations(
+  lastId?: string,
+  limit: number = 2
+): Promise<ConversationsResponse> {
   try {
-    const response = await fetch('/api/conversations')
+    const params = new URLSearchParams({ limit: limit.toString() })
+    if (lastId) {
+      params.append('last_id', lastId)
+    }
 
-    if (!response.ok) return []
+    const response = await fetch(`/api/conversations?${params}`)
+
+    if (!response.ok) {
+      return { conversations: [], hasMore: false, limit: 20 }
+    }
 
     const data = await response.json()
-    return (data.data || []).map((conv: any) => ({
-      id: conv.id,
-      name: conv.name || 'Untitled',
-      updatedAt: new Date(conv.updated_at).getTime(),
-    }))
+    return {
+      conversations: (data.data || []).map((conv: any) => ({
+        id: conv.id,
+        name: conv.name || 'Untitled',
+        updatedAt: conv.updated_at * 1000, // Convert to milliseconds
+      })),
+      hasMore: data.has_more || false,
+      limit: data.limit || 20,
+    }
   } catch {
-    return []
+    return { conversations: [], hasMore: false, limit: 20 }
   }
 }
 
