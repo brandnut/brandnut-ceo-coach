@@ -42,7 +42,8 @@
       "Bash(brew install:*)",
       "Bash(arch:*)",
       "Bash(npm run build:*)",
-      "Bash(git push)"
+      "Bash(git push)",
+      "Bash(ssh:*)"
     ],
     "deny": [],
     "ask": []

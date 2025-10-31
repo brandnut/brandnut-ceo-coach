@@ -3,6 +3,8 @@ import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcrypt'
 import pool from './db'
 
+// Build trigger: v2
+
 export const authConfig: NextAuthConfig = {
   trustHost: true, // Trust all hosts for production deployment
   providers: [
