@@ -11,6 +11,8 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '20mb',
     },
   },
+  // Enable standalone output for Docker
+  output: 'standalone',
 };
 
 export default nextConfig;
