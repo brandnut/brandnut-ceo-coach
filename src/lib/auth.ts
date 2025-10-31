@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt'
 import pool from './db'
 
 export const authConfig: NextAuthConfig = {
+  trustHost: true, // Trust all hosts for production deployment
   providers: [
     Credentials({
       credentials: {
