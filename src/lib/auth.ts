@@ -5,18 +5,6 @@ import pool from './db'
 
 export const authConfig: NextAuthConfig = {
   trustHost: true, // Trust all hosts for production deployment
-  cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: false, // HTTP 部署设为 false
-        domain: '.keithchen.me', // 跨子域名共享
-      },
-    },
-  },
   providers: [
     Credentials({
       credentials: {
