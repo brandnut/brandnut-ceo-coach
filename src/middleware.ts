@@ -19,7 +19,7 @@ export default async function middleware(req: NextRequest) {
     const token = await getToken({
       req,
       secret: process.env.NEXTAUTH_SECRET,
-      secureCookie: process.env.NODE_ENV === 'production'
+      secureCookie: false // HTTP 部署必须设为 false
     })
 
     // 用户未登录
