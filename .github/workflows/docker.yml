@@ -55,7 +55,7 @@ jobs:
           DIFY_API_URL=${{ secrets.DIFY_API_URL }}
           DIFY_API_KEY=${{ secrets.DIFY_API_KEY }}
           NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
-          NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
+          NEXTAUTH_URL=https://ceibs.keithchen.me
           DATABASE_URL=${{ secrets.DATABASE_URL }}
           LLAMAINDEX_API_BASE_URL=${{ secrets.LLAMAINDEX_API_BASE_URL }}
           LLAMAINDEX_API_KEY=${{ secrets.LLAMAINDEX_API_KEY }}
