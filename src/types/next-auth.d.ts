@@ -5,12 +5,14 @@ declare module 'next-auth' {
     user: {
       id: string
       name: string
+      role: 'admin' | 'user'
     }
   }
 
   interface User {
     id: string
     name: string
+    role: 'admin' | 'user'
   }
 }
 
@@ -18,5 +20,6 @@ declare module 'next-auth/jwt' {
   interface JWT {
     sub?: string
     name?: string
+    role?: 'admin' | 'user'
   }
 }

@@ -11,12 +11,17 @@ import {
   QuestionCircleOutlined,
 } from "@ant-design/icons";
 import TutorialModal from "@/components/TutorialModal";
+import Navigation from "@/components/layout/Navigation";
+import MenuBar from "@/components/layout/MenuBar";
 import type { UploadFile } from "antd";
 import type { Message as AppMessage } from "@/types";
 import CustomStreamdown from "@/components/CustomStreamdown";
+import { Button } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
 import { getConversations, deleteConversation } from "@/lib/api";
 import { uploadFile, convertToVisionFiles } from "@/lib/file-upload";
 import type { AttachmentFile } from "@/types";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface Conversation {
   id: string;
@@ -44,7 +49,10 @@ export default function ChatPage() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const currentTaskIdRef = useRef<string | null>(null);
@@ -55,6 +63,13 @@ export default function ChatPage() {
       router.push("/login");
     } else if (status === "authenticated") {
       loadConversations();
+
+      // Check if tutorial should be shown
+      const tutorialShown = localStorage.getItem("tutorial-shown");
+      if (tutorialShown !== "true") {
+        setIsHelpOpen(true);
+        localStorage.setItem("tutorial-shown", "true");
+      }
     }
   }, [status, router]);
 
@@ -154,6 +169,12 @@ export default function ChatPage() {
     setCurrentConvId(null);
     setMessages([]);
     setInput("");
+  };
+
+  const getCurrentConversationName = () => {
+    if (!currentConvId) return undefined;
+    const conv = conversations.find((c) => c.id === currentConvId);
+    return conv?.name || undefined;
   };
 
   const loadConversation = async (convId: string) => {
@@ -459,85 +480,56 @@ export default function ChatPage() {
     return null;
   }
 
-  return (
-    <div className="chat-container">
-      <div className="sidebar">
-        <div className="sidebar-header">
-          <div className="user-info">{session.user?.name}</div>
-          <button onClick={() => signOut()} className="button-small">
-            Logout
-          </button>
+  const SidebarContent = () => (
+    <>
+      <div className="sidebar-header">
+        <div className="sidebar-header-top">
+          <Navigation />
         </div>
-        {/* {docCountLabel && docFiles.length > 0 && (
-          <Popover
-            placement="bottom"
-            trigger={["hover", "click"]}
-            arrow={false}
-            styles={{
-              root: {
-                width: "240px",
-              },
-            }}
-            content={
-              <div className="max-h-80 overflow-y-auto break-words space-y-4">
-                {docFiles.map((file, index) => (
-                  <div
-                    key={`${file.name || "file"}-${index}`}
-                    className="text-xs"
-                  >
-                    <div className="text-foreground">
-                      {file.name || "未命名"}
-                    </div>
-                    {typeof file.indexed_page_count === "number" && (
-                      <div className="text-muted-foreground/80">
-                        {file.indexed_page_count} 页
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            }
+        <div>
+          <Button
+            type="primary"
+            onClick={startNewConversation}
+            icon={<PlusOutlined />}
+            block
           >
-            <div className="mt-2 px-1 text-xs text-center text-muted-foreground cursor-pointer select-none">
-              知识库文档：{docCountLabel}
-            </div>
-          </Popover>
-        )} */}
-        <button onClick={startNewConversation} className="new-chat-button">
-          新建对话
-        </button>
-        <div className="flex-1 overflow-y-auto">
-          <Conversations
-            items={conversations.map((conv) => ({
-              key: conv.id,
-              label: conv.name,
-            }))}
-            activeKey={currentConvId || undefined}
-            onActiveChange={(key) => loadConversation(key)}
-            menu={(conversation) => ({
-              items: [
-                {
-                  key: "delete",
-                  label: "删除",
-                  icon: <DeleteOutlined />,
-                  danger: true,
-                  onClick: () =>
-                    handleDeleteConversation(conversation.key as string),
-                },
-              ],
-            })}
-          />
-          {hasMore && (
-            <button
-              onClick={() => loadConversations(true)}
-              disabled={isLoadingMore}
-              className="w-full pl-[20px] pr-3 pb-2 text-left text-sm text-muted-foreground/60 bg-transparent border-none cursor-pointer transition-colors hover:text-foreground disabled:text-muted-foreground disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {isLoadingMore ? "加载中..." : "加载更多"}
-            </button>
-          )}
+            新建对话
+          </Button>
         </div>
-        <div className="flex justify-end px-2 pb-3">
+      </div>
+      <div className="sidebar-content">
+        <Conversations
+          items={conversations.map((conv) => ({
+            key: conv.id,
+            label: conv.name,
+          }))}
+          activeKey={currentConvId || undefined}
+          onActiveChange={(key) => loadConversation(key)}
+          menu={(conversation) => ({
+            items: [
+              {
+                key: "delete",
+                label: "删除",
+                icon: <DeleteOutlined />,
+                danger: true,
+                onClick: () =>
+                  handleDeleteConversation(conversation.key as string),
+              },
+            ],
+          })}
+        />
+        {hasMore && (
+          <button
+            onClick={() => loadConversations(true)}
+            disabled={isLoadingMore}
+            className="w-full pl-[20px] pr-3 pb-2 text-left text-sm text-muted-foreground/60 bg-transparent border-none cursor-pointer transition-colors hover:text-foreground disabled:text-muted-foreground disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isLoadingMore ? "加载中..." : "加载更多"}
+          </button>
+        )}
+      </div>
+      <div className="sidebar-footer">
+        <div className="flex justify-end">
           <button
             type="button"
             onClick={() => setIsHelpOpen(true)}
@@ -548,8 +540,26 @@ export default function ChatPage() {
           </button>
         </div>
       </div>
+    </>
+  );
+
+  return (
+    <div className="chat-container">
+      {/* Desktop sidebar - hidden on mobile */}
+      {!isMobile && (
+        <div className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>
+          <SidebarContent />
+        </div>
+      )}
 
       <div className="main overflow-x-hidden">
+        <MenuBar
+          onSidebarToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+          sidebarCollapsed={sidebarCollapsed}
+          currentConvName={getCurrentConversationName()}
+        >
+          <SidebarContent />
+        </MenuBar>
         <div className="messages" ref={messagesContainerRef}>
           {isLoadingConversation ? (
             <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
@@ -557,9 +567,43 @@ export default function ChatPage() {
               <span className="text-base font-medium">加载对话中...</span>
             </div>
           ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
-              <span className="text-5xl">👋</span>
+            <div className="flex flex-col items-center justify-center h-full gap-6 text-muted-foreground">
+              <span className="text-4xl">👋</span>
               <span className="text-base font-medium">开始新对话</span>
+              <div className="flex flex-col gap-2 w-full max-w-md">
+                <p className="text-sm text-center">您可以尝试询问以下问题：</p>
+                <div className="flex flex-col gap-2 text-sm">
+                  <div
+                    className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors"
+                    onClick={() => setInput("银发市场近年来的趋势是什么？")}
+                  >
+                    银发市场近年来的趋势是什么？
+                  </div>
+                  <div
+                    className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors"
+                    onClick={() =>
+                      setInput("适老家居用品的消费情况有什么趋势？")
+                    }
+                  >
+                    适老家居用品的消费情况有什么趋势？
+                  </div>
+                  <div
+                    className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors"
+                    onClick={() => setInput("银发人群的消费特征是什么？")}
+                  >
+                    银发人群的消费特征是什么？
+                  </div>
+                </div>
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setIsHelpOpen(true)}
+                    className="mt-2 px-3 py-1 text-sm text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-2"
+                  >
+                    了解更多
+                  </button>
+                </div>
+              </div>
             </div>
           ) : (
             <>
@@ -621,16 +665,14 @@ export default function ChatPage() {
               attachments.length > 0 && (
                 <Attachments
                   items={
-                    (
-                      attachments.map((f) => ({
-                        uid: f.uid,
-                        name: f.name,
-                        size: f.size,
-                        type: f.type,
-                        status: f.status as UploadFile['status'],
-                        url: f.url,
-                      })) as UploadFile[]
-                    )
+                    attachments.map((f) => ({
+                      uid: f.uid,
+                      name: f.name,
+                      size: f.size,
+                      type: f.type,
+                      status: f.status as UploadFile["status"],
+                      url: f.url,
+                    })) as UploadFile[]
                   }
                   onRemove={handleFileRemove}
                   overflow="scrollX"

@@ -37,6 +37,7 @@ export const authConfig: NextAuthConfig = {
         return {
           id: user.id.toString(),
           name: user.username,
+          role: user.role || 'user', // 确保向后兼容
         }
       },
     }),
@@ -46,6 +47,20 @@ export const authConfig: NextAuthConfig = {
   },
   session: {
     strategy: 'jwt',
+  },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = user.role
+      }
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user && token.role) {
+        session.user.role = token.role as 'admin' | 'user'
+      }
+      return session
+    },
   },
 }
 

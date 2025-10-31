@@ -1,98 +1,121 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useState, useEffect } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { Form, Input, Button, Alert, Typography, Card, Space } from "antd";
+import { UserOutlined, LockOutlined } from "@ant-design/icons";
+
+const { Title } = Typography;
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const router = useRouter();
+  const { data: session, status } = useSession();
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [form] = Form.useForm();
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push("/");
+    }
+  }, [status, router]);
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  if (session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">已登录，正在跳转...</div>
+      </div>
+    );
+  }
+
+  async function handleSubmit(values: { username: string; password: string }) {
+    setError("");
+    setLoading(true);
 
     try {
-      const result = await signIn('credentials', {
-        username,
-        password,
+      const result = await signIn("credentials", {
+        username: values.username,
+        password: values.password,
         redirect: false,
-      })
+      });
 
       if (result?.error) {
-        setError('Invalid username or password')
+        setError("用户名或密码错误");
       } else {
-        router.push('/')
-        router.refresh()
+        // Set tutorial shown flag to false for first-time login
+        localStorage.setItem("tutorial-shown", "false");
+        router.push("/");
+        router.refresh();
       }
     } catch {
-      setError('Login failed')
+      setError("登录失败");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
-        <div>
-          <h2 className="text-3xl font-bold text-center">Login</h2>
+      <Card className="w-full max-w-md shadow-lg">
+        <div className="text-center mb-8">
+          <Title level={2}>中欧银发经济知识库</Title>
+          <Typography.Text type="secondary">请使用您的账户登录</Typography.Text>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium">
-                Username
-              </label>
-              <input
-                id="username"
-                type="text"
-                required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-              />
-            </div>
-          </div>
 
-          {error && (
-            <div className="text-red-600 text-sm text-center">{error}</div>
-          )}
+        {error && (
+          <Alert message={error} type="error" showIcon className="mb-6" />
+        )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md disabled:opacity-50"
+        <Form
+          form={form}
+          onFinish={handleSubmit}
+          layout="vertical"
+          size="large"
+        >
+          <Form.Item
+            name="username"
+            rules={[{ required: true, message: "请输入用户名" }]}
           >
-            {loading ? 'Loading...' : 'Login'}
-          </button>
+            <Input
+              prefix={<UserOutlined />}
+              placeholder="用户名"
+              autoComplete="username"
+            />
+          </Form.Item>
 
-          <div className="text-center text-sm">
-            Don't have an account?{' '}
-            <Link href="/register" className="text-blue-600 hover:underline">
-              Register
-            </Link>
-          </div>
-        </form>
-      </div>
+          <Form.Item
+            name="password"
+            rules={[{ required: true, message: "请输入密码" }]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="密码"
+              autoComplete="current-password"
+            />
+          </Form.Item>
+
+          <Form.Item>
+            <Button type="primary" htmlType="submit" loading={loading} block>
+              {loading ? "登录中..." : "登录"}
+            </Button>
+          </Form.Item>
+        </Form>
+
+        <div className="text-center">
+          <Typography.Text type="secondary" className="text-sm">
+            还没有账户？请联系管理员创建
+          </Typography.Text>
+        </div>
+      </Card>
     </div>
-  )
+  );
 }

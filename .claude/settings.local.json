@@ -31,7 +31,17 @@
       "Read(//tmp/x/components/sender/**)",
       "Bash(git reset:*)",
       "Bash(lsof:*)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(find:*)",
+      "Bash(psql:*)",
+      "Bash(PGPASSWORD=\"${POSTGRES_PASSWORD:-}\" psql:*)",
+      "Bash(node scripts/migrate.js)",
+      "Bash(node:*)",
+      "Bash(npm info:*)",
+      "WebFetch(domain:u.ant.design)",
+      "Bash(brew install:*)",
+      "Bash(arch:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []
