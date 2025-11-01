@@ -9,6 +9,7 @@ import {
   PaperClipOutlined,
   DeleteOutlined,
   QuestionCircleOutlined,
+  LoadingOutlined,
 } from "@ant-design/icons";
 import TutorialModal from "@/components/TutorialModal";
 import Navigation from "@/components/layout/Navigation";
@@ -32,9 +33,10 @@ interface Conversation {
 
 // Use shared Message type (with message_files) from src/types
 
-function InstanceHandler({ onInstanceLoaded, onInstanceDataLoaded }: {
+function InstanceHandler({ onInstanceLoaded, onInstanceDataLoaded, onLoadingChange }: {
   onInstanceLoaded: (title: string) => void;
   onInstanceDataLoaded: (data: any) => void;
+  onLoadingChange: (loading: boolean) => void;
 }) {
   const searchParams = useSearchParams();
 
@@ -48,6 +50,7 @@ function InstanceHandler({ onInstanceLoaded, onInstanceDataLoaded }: {
 
   const fetchInstanceConfig = async (instanceId: string) => {
     try {
+      onLoadingChange(true);
       console.log(`🔍 Fetching instance config for: ${instanceId}`);
 
       const response = await fetch(
@@ -79,6 +82,8 @@ function InstanceHandler({ onInstanceLoaded, onInstanceDataLoaded }: {
       }
     } catch (error) {
       console.error('❌ Error fetching instance config:', error);
+    } finally {
+      onLoadingChange(false);
     }
   };
 
@@ -89,6 +94,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [instanceTitle, setInstanceTitle] = useState<string>("");
   const [instanceData, setInstanceData] = useState<any>(null);
+  const [isLoadingInstance, setIsLoadingInstance] = useState<boolean>(false);
   const { data: session, status } = useSession();
 
   // Guest mode auto sign in
@@ -602,6 +608,7 @@ export default function ChatPage() {
         <InstanceHandler
           onInstanceLoaded={setInstanceTitle}
           onInstanceDataLoaded={setInstanceData}
+          onLoadingChange={setIsLoadingInstance}
         />
       </Suspense>
       {/* Desktop sidebar - hidden on mobile */}
@@ -629,9 +636,39 @@ export default function ChatPage() {
             <div className="flex flex-col items-center justify-center h-full gap-6 text-muted-foreground">
               <span className="text-4xl">{welcomeText.greeting}</span>
               <span className="text-base font-medium">{welcomeText.startNewConversation}</span>
-              {instanceTitle && (
-                <span className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
-                  {instanceTitle}
+              {(instanceTitle || isLoadingInstance) && (
+                <span className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full flex items-center gap-2">
+                  {isLoadingInstance ? (
+                    <>
+                      <LoadingOutlined className="animate-spin" />
+                      正在加载任务模板
+                    </>
+                  ) : (
+                    <Popover
+                      content={
+                        <div className="max-w-xs">
+                          <p className="text-sm text-gray-700">
+                            {instanceData?.description || '暂无描述'}
+                          </p>
+                          {instanceData?.tags && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {instanceData.tags.map((tag: string, index: number) => (
+                                <span key={index} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      }
+                      trigger="hover"
+                      placement="bottom"
+                    >
+                      <span className="cursor-help hover:bg-gray-200 transition-colors px-1 rounded">
+                        {instanceTitle}
+                      </span>
+                    </Popover>
+                  )}
                 </span>
               )}
               {welcomeQuestions.length > 0 && (
