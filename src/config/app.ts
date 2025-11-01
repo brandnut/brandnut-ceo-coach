@@ -52,3 +52,9 @@ export const difyInputs = {
   // Dify 变量配置
   // 例如: { industry: "technology", region: "global" }
 };
+
+export const appInfo = {
+  name: "通用知识库",
+  title: "通用知识库",
+  description: "智能问答系统",
+};

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button, Drawer } from "antd";
 import { MenuOutlined } from "@ant-design/icons";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { appInfo } from "@/config/app";
 
 interface MenuBarProps {
   onSidebarToggle: () => void;
@@ -51,18 +52,18 @@ export default function MenuBar({
                     {currentConvName}
                   </h1>
                   <span className="text-sm text-gray-600">
-                    中欧银发经济知识库
+                    {appInfo.name}
                   </span>
                 </>
               ) : (
                 <h1 className="text-lg font-semibold text-gray-900">
-                  中欧银发经济知识库
+                  {appInfo.name}
                 </h1>
               )}
             </div>
           ) : (
             <h1 className="text-lg font-semibold text-gray-900">
-              中欧银发经济知识库
+              {appInfo.name}
             </h1>
           )}
         </div>

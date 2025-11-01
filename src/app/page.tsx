@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { signOut, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Sender, Attachments, Conversations } from "@ant-design/x";
 import { Popover, Upload } from "antd";
 import {
@@ -31,6 +31,55 @@ interface Conversation {
 }
 
 // Use shared Message type (with message_files) from src/types
+
+function InstanceHandler() {
+  const searchParams = useSearchParams();
+
+  // 处理 instance 查询参数
+  useEffect(() => {
+    const instanceId = searchParams.get('instance');
+    if (instanceId) {
+      fetchInstanceConfig(instanceId);
+    }
+  }, [searchParams]);
+
+  const fetchInstanceConfig = async (instanceId: string) => {
+    try {
+      console.log(`🔍 Fetching instance config for: ${instanceId}`);
+
+      const response = await fetch(
+        `https://brandnut.cn/memory/api/v1/instance/${instanceId}`,
+        {
+          method: 'GET',
+          headers: {
+            'X-API-Key': 'brandnut_246bdff1-e8a5-4daa-8928-21b849b8db57',
+            'Accept': 'application/json',
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📋 Instance API Response:');
+        console.log(JSON.stringify(data, null, 2));
+
+        // 可以在这里根据实例配置更新应用状态
+        if (data.title) {
+          console.log(`📝 Instance Title: ${data.title}`);
+        }
+        if (data.tags) {
+          console.log(`🏷️  Instance Tags: ${data.tags.join(', ')}`);
+        }
+      } else {
+        console.error(`❌ Failed to fetch instance: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching instance config:', error);
+    }
+  };
+
+  return null;
+}
 
 export default function ChatPage() {
   const [input, setInput] = useState("");
@@ -547,6 +596,9 @@ export default function ChatPage() {
 
   return (
     <div className="chat-container">
+      <Suspense fallback={null}>
+        <InstanceHandler />
+      </Suspense>
       {/* Desktop sidebar - hidden on mobile */}
       {!isMobile && (
         <div className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>

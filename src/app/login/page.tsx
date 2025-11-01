@@ -5,6 +5,7 @@ import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Form, Input, Button, Alert, Typography, Card, Space } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
+import { appInfo } from "@/config/app";
 
 const { Title } = Typography;
 
@@ -67,7 +68,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md shadow-lg">
         <div className="text-center mb-8">
-          <Title level={2}>中欧银发经济知识库</Title>
+          <Title level={2}>{appInfo.name}</Title>
           <Typography.Text type="secondary">请使用您的账户登录</Typography.Text>
         </div>
 

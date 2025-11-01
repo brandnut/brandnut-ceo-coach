@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import "@ant-design/v5-patch-for-react-19";
+import { appInfo } from "@/config/app";
 
 export const metadata: Metadata = {
-  title: "中欧银发经济知识库",
-  description: "基于 LLM 和知识库检索的回答",
+  title: appInfo.title,
+  description: appInfo.description,
 };
 
 export default function RootLayout({
