@@ -624,28 +624,30 @@ export default function ChatPage() {
             <div className="flex flex-col items-center justify-center h-full gap-6 text-muted-foreground">
               <span className="text-4xl">{welcomeText.greeting}</span>
               <span className="text-base font-medium">{welcomeText.startNewConversation}</span>
-              <div className="flex flex-col gap-2 w-full max-w-md">
-                <p className="text-sm text-center">{welcomeText.suggestedQuestionsTitle}</p>
-                <div className="flex flex-col gap-2 text-sm">
-                  {welcomeQuestions.map((question, index) => (
-                    <div
-                      key={index}
-                      className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors"
-                      onClick={() => setInput(question)}
-                    >
-                      {question}
-                    </div>
-                  ))}
+              {welcomeQuestions.length > 0 && (
+                <div className="flex flex-col gap-2 w-full max-w-md">
+                  <p className="text-sm text-center">{welcomeText.suggestedQuestionsTitle}</p>
+                  <div className="flex flex-col gap-2 text-sm">
+                    {welcomeQuestions.map((question, index) => (
+                      <div
+                        key={index}
+                        className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors"
+                        onClick={() => setInput(question)}
+                      >
+                        {question}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => setIsHelpOpen(true)}
-                    className="mt-2 px-3 py-1 text-sm text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-2"
-                  >
-                    了解更多
-                  </button>
-                </div>
+              )}
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setIsHelpOpen(true)}
+                  className="mt-2 px-3 py-1 text-sm text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-2"
+                >
+                  了解更多
+                </button>
               </div>
             </div>
           ) : (
