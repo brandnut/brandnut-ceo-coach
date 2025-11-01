@@ -10,6 +10,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return createErrorResponse(authCheck.reason || 'Unauthorized')
   }
 
+  if (!pool) {
+    return createErrorResponse('Database not available', 503)
+  }
+
   try {
     const { id } = await params
     const { role, newPassword } = await req.json()
@@ -79,6 +83,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   if (!authCheck.authorized) {
     return createErrorResponse(authCheck.reason || 'Unauthorized')
+  }
+
+  if (!pool) {
+    return createErrorResponse('Database not available', 503)
   }
 
   try {

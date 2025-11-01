@@ -26,7 +26,7 @@ export const guestMode = {
 };
 
 export const appInfo = {
-  name: "通用知识库",
-  title: "通用知识库",
+  name: "品核 AI",
+  title: "品核 AI",
   description: "智能问答系统",
 };

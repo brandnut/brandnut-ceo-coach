@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const instanceId = params.id;
+  const { id: instanceId } = await params;
 
   if (!instanceId) {
     return NextResponse.json({ error: 'Instance ID is required' }, { status: 400 });

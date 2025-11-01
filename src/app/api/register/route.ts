@@ -4,6 +4,13 @@ import pool from '@/lib/db'
 import { requireAdmin } from '@/lib/middleware'
 
 export async function POST(req: NextRequest) {
+  if (!pool) {
+    return NextResponse.json(
+      { error: 'Database not available' },
+      { status: 503 }
+    )
+  }
+
   try {
     const { username, password, role } = await req.json()
 

@@ -10,6 +10,15 @@ export async function POST(req: NextRequest) {
     return createErrorResponse(authCheck.reason || 'Unauthorized')
   }
 
+  // Guest mode cannot change password
+  if (authCheck.session?.user?.name === 'guest') {
+    return createErrorResponse('Guest users cannot change password', 403)
+  }
+
+  if (!pool) {
+    return createErrorResponse('Database not available', 503)
+  }
+
   try {
     const { currentPassword, newPassword } = await req.json()
     const userId = authCheck.session?.user?.id

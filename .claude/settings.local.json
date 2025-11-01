@@ -45,7 +45,11 @@
       "Bash(git push)",
       "Bash(ssh:*)",
       "Bash(git checkout:*)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(git push:*)",
+      "Bash(gh repo create:*)",
+      "Bash(git remote add:*)",
+      "Bash(gh repo edit:*)"
     ],
     "deny": [],
     "ask": []

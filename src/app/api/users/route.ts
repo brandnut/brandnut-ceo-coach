@@ -10,6 +10,10 @@ export async function GET(req: NextRequest) {
     return createErrorResponse(authCheck.reason || 'Unauthorized')
   }
 
+  if (!pool) {
+    return createErrorResponse('Database not available', 503)
+  }
+
   try {
     const result = await pool.query(
       'SELECT id, username, role, created_at FROM users ORDER BY created_at DESC'
@@ -31,6 +35,10 @@ export async function POST(req: NextRequest) {
 
   if (!authCheck.authorized) {
     return createErrorResponse(authCheck.reason || 'Unauthorized')
+  }
+
+  if (!pool) {
+    return createErrorResponse('Database not available', 503)
   }
 
   try {

@@ -26,8 +26,19 @@ export const authConfig: NextAuthConfig = {
           }
         }
 
+        // If guest mode is enabled, skip database operations entirely
+        if (guestMode.enabled) {
+          console.log('Guest mode enabled, skipping database authentication');
+          return null;
+        }
+
         if (!credentials?.username || !credentials?.password) {
           return null
+        }
+
+        if (!pool) {
+          console.error('Database not available in auth');
+          return null;
         }
 
         const result = await pool.query(
