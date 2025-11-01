@@ -22,7 +22,7 @@ import { getConversations, deleteConversation } from "@/lib/api";
 import { uploadFile, convertToVisionFiles } from "@/lib/file-upload";
 import type { AttachmentFile } from "@/types";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { welcomeQuestions, welcomeText } from '@/config/app';
+import { welcomeQuestions, welcomeText, difyInputs } from '@/config/app';
 
 interface Conversation {
   id: string;
@@ -367,6 +367,7 @@ export default function ChatPage() {
           query: userMessage,
           conversationId: currentConvId,
           files: visionFiles,
+          inputs: difyInputs,
         }),
         signal: abortControllerRef.current.signal,
       });

@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { query, conversationId = null, files = [] } = body
+    const { query, conversationId = null, files = [], inputs = {} } = body
 
     if (!query || !query.trim()) {
       return new Response('Empty message', { status: 400 })
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        inputs: {},
+        inputs,
         query,
         user: session.user.name,
         conversation_id: conversationId,

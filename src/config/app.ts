@@ -47,3 +47,8 @@ export const welcomeText = {
   startNewConversation: "开始新对话",
   suggestedQuestionsTitle: "您可以尝试询问以下问题：",
 };
+
+export const difyInputs = {
+  // Dify 变量配置
+  // 例如: { industry: "technology", region: "global" }
+};
