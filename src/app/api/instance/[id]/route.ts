@@ -6,7 +6,11 @@ export async function GET(
 ) {
   const { id: instanceId } = await params;
 
+  console.log(`🎯 Instance API called with ID: ${instanceId}`);
+  console.log(`🔗 Request URL: ${request.url}`);
+
   if (!instanceId) {
+    console.error('❌ No instance ID provided');
     return NextResponse.json({ error: 'Instance ID is required' }, { status: 400 });
   }
 
@@ -14,7 +18,7 @@ export async function GET(
 
   if (!apiKey) {
     console.error('BRANDNUT_MEMORY_API_KEY is not configured');
-    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
   }
 
   try {
