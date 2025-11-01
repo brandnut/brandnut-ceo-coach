@@ -26,7 +26,7 @@ export const guestMode = {
 };
 
 export const appInfo = {
-  name: "品核 AI",
-  title: "品核 AI",
-  description: "智能问答系统",
+  name: "品核 AI Chat",
+  title: "品核 AI Chat",
+  description: "释放品牌真潜能、企业级记忆协同",
 };
