@@ -22,6 +22,7 @@ import { getConversations, deleteConversation } from "@/lib/api";
 import { uploadFile, convertToVisionFiles } from "@/lib/file-upload";
 import type { AttachmentFile } from "@/types";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { getConfig } from '@/config/app';
 
 interface Conversation {
   id: string;
@@ -32,6 +33,8 @@ interface Conversation {
 // Use shared Message type (with message_files) from src/types
 
 export default function ChatPage() {
+  const [input, setInput] = useState("");
+  const config = getConfig(setInput);
   const { data: session, status } = useSession();
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -39,7 +42,6 @@ export default function ChatPage() {
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [messages, setMessages] = useState<AppMessage[]>([]);
-  const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [workflowStatus, setWorkflowStatus] = useState<string>("");
   const [docCountLabel, setDocCountLabel] = useState<string | null>(null);
@@ -568,31 +570,20 @@ export default function ChatPage() {
             </div>
           ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-6 text-muted-foreground">
-              <span className="text-4xl">👋</span>
-              <span className="text-base font-medium">开始新对话</span>
+              <span className="text-4xl">{config.app.icon}</span>
+              <span className="text-base font-medium">{config.welcome.startNewConversation}</span>
               <div className="flex flex-col gap-2 w-full max-w-md">
-                <p className="text-sm text-center">您可以尝试询问以下问题：</p>
+                <p className="text-sm text-center">{config.welcome.suggestedQuestionsTitle}</p>
                 <div className="flex flex-col gap-2 text-sm">
-                  <div
-                    className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors"
-                    onClick={() => setInput("银发市场近年来的趋势是什么？")}
-                  >
-                    银发市场近年来的趋势是什么？
-                  </div>
-                  <div
-                    className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors"
-                    onClick={() =>
-                      setInput("适老家居用品的消费情况有什么趋势？")
-                    }
-                  >
-                    适老家居用品的消费情况有什么趋势？
-                  </div>
-                  <div
-                    className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors"
-                    onClick={() => setInput("银发人群的消费特征是什么？")}
-                  >
-                    银发人群的消费特征是什么？
-                  </div>
+                  {config.welcome.suggestedQuestions.map((question, index) => (
+                    <div
+                      key={index}
+                      className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors"
+                      onClick={question.onClick}
+                    >
+                      {question.text}
+                    </div>
+                  ))}
                 </div>
                 <div className="flex justify-center">
                   <button

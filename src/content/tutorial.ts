@@ -1,38 +1,34 @@
-export const tutorialMarkdown = `# 👋 欢迎来到中欧国际工商学院 · 银发经济知识库
+import { getConfig } from '@/config/app';
 
+const config = getConfig();
 
-本知识库旨在帮助您快速、准确地了解 **银发经济（老龄化社会相关产业）** 的市场趋势、消费洞察、案例与政策研究。所有内容由 AI 生成，请仔细甄别。
+export const tutorialMarkdown = `# ${config.app.icon} ${config.tutorial.title}
 
----
-
-## 如何提问
-请围绕 **银发经济** 提问。例如：
-
-- “银发消费的主要品类增长趋势有哪些？”  
-- “老年人线上购物的主要渠道是哪些？”  
-- “适老家居用品的消费情况有什么趋势？”  
+${config.tutorial.description}
 
 ---
 
-## 生成思维导图
+## ${config.tutorial.howToAsk.title}
+${config.tutorial.howToAsk.examples.map((example, index) =>
+  index === 0 ? example : `- "${example}"`
+).join('\n')}
 
-当您希望以更直观的方式理解信息时，可以直接请求系统绘制 **思维导图、流程图、框架图** 等图表，例如：
+---
 
-- “请用思维导图展示”  
-- “画一张流程图”
+## ${config.tutorial.mindMapping.title}
+
+${config.tutorial.mindMapping.triggers.map(trigger => trigger).join('\n')}
 
 ---
 
 ## 回答逻辑
 
-1. 如果问题需要数据或报告支撑，AI 会从知识库中 **检索相关文件内容**。  
-2. 若需补充最新资讯（如政策、品牌动态等），AI 会结合互联网公开数据进行说明。  
+${config.tutorial.logic.map((logic, index) => `${index + 1}. ${logic}`).join('\n')}
 
 ---
 
 ## 注意事项
 
-- 所有内容由 AI 生成，请仔细甄别。
-- 您的对话不会永久保存
+${config.tutorial.notes.map(note => `- ${note}`).join('\n')}
 
 `;
