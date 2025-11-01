@@ -32,7 +32,10 @@ interface Conversation {
 
 // Use shared Message type (with message_files) from src/types
 
-function InstanceHandler({ onInstanceLoaded }: { onInstanceLoaded: (title: string) => void }) {
+function InstanceHandler({ onInstanceLoaded, onInstanceDataLoaded }: {
+  onInstanceLoaded: (title: string) => void;
+  onInstanceDataLoaded: (data: any) => void;
+}) {
   const searchParams = useSearchParams();
 
   // 处理 instance 查询参数
@@ -63,9 +66,10 @@ function InstanceHandler({ onInstanceLoaded }: { onInstanceLoaded: (title: strin
         console.log('📋 Instance API Response:');
         console.log(JSON.stringify(data, null, 2));
 
-        // 设置实例标题
+        // 设置实例标题和数据
         if (data.title) {
           onInstanceLoaded(data.title);
+          onInstanceDataLoaded(data);
           console.log(`📝 Instance Title: ${data.title}`);
         }
         if (data.tags) {
@@ -85,6 +89,7 @@ function InstanceHandler({ onInstanceLoaded }: { onInstanceLoaded: (title: strin
 export default function ChatPage() {
   const [input, setInput] = useState("");
   const [instanceTitle, setInstanceTitle] = useState<string>("");
+  const [instanceData, setInstanceData] = useState<any>(null);
   const { data: session, status } = useSession();
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -418,7 +423,12 @@ export default function ChatPage() {
           query: userMessage,
           conversationId: currentConvId,
           files: visionFiles,
-          inputs: difyInputs,
+          inputs: {
+            ...difyInputs,
+            ...(instanceData && !currentConvId && instanceData.prompt ? {
+              prompt: instanceData.prompt
+            } : {})
+          },
         }),
         signal: abortControllerRef.current.signal,
       });
@@ -599,7 +609,10 @@ export default function ChatPage() {
   return (
     <div className="chat-container">
       <Suspense fallback={null}>
-        <InstanceHandler onInstanceLoaded={setInstanceTitle} />
+        <InstanceHandler
+          onInstanceLoaded={setInstanceTitle}
+          onInstanceDataLoaded={setInstanceData}
+        />
       </Suspense>
       {/* Desktop sidebar - hidden on mobile */}
       {!isMobile && (
@@ -628,7 +641,7 @@ export default function ChatPage() {
               <span className="text-base font-medium">{welcomeText.startNewConversation}</span>
               {instanceTitle && (
                 <span className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
-                  模板：{instanceTitle}
+                  {instanceTitle}
                 </span>
               )}
               {welcomeQuestions.length > 0 && (
