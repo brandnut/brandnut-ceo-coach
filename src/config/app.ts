@@ -37,9 +37,9 @@ export const tutorialMarkdown = `# 👋 欢迎使用通用知识库
 `;
 
 export const welcomeQuestions = [
-  "相关领域的发展趋势有哪些？",
-  "主要特征或特点是什么？",
-  "相关情况有什么变化？",
+  // "相关领域的发展趋势有哪些？",
+  // "主要特征或特点是什么？",
+  // "相关情况有什么变化？",
 ];
 
 export const welcomeText = {

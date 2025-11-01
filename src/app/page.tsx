@@ -32,7 +32,7 @@ interface Conversation {
 
 // Use shared Message type (with message_files) from src/types
 
-function InstanceHandler() {
+function InstanceHandler({ onInstanceLoaded }: { onInstanceLoaded: (title: string) => void }) {
   const searchParams = useSearchParams();
 
   // 处理 instance 查询参数
@@ -63,8 +63,9 @@ function InstanceHandler() {
         console.log('📋 Instance API Response:');
         console.log(JSON.stringify(data, null, 2));
 
-        // 可以在这里根据实例配置更新应用状态
+        // 设置实例标题
         if (data.title) {
+          onInstanceLoaded(data.title);
           console.log(`📝 Instance Title: ${data.title}`);
         }
         if (data.tags) {
@@ -83,6 +84,7 @@ function InstanceHandler() {
 
 export default function ChatPage() {
   const [input, setInput] = useState("");
+  const [instanceTitle, setInstanceTitle] = useState<string>("");
   const { data: session, status } = useSession();
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -597,7 +599,7 @@ export default function ChatPage() {
   return (
     <div className="chat-container">
       <Suspense fallback={null}>
-        <InstanceHandler />
+        <InstanceHandler onInstanceLoaded={setInstanceTitle} />
       </Suspense>
       {/* Desktop sidebar - hidden on mobile */}
       {!isMobile && (
@@ -624,6 +626,11 @@ export default function ChatPage() {
             <div className="flex flex-col items-center justify-center h-full gap-6 text-muted-foreground">
               <span className="text-4xl">{welcomeText.greeting}</span>
               <span className="text-base font-medium">{welcomeText.startNewConversation}</span>
+              {instanceTitle && (
+                <span className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
+                  模板：{instanceTitle}
+                </span>
+              )}
               {welcomeQuestions.length > 0 && (
                 <div className="flex flex-col gap-2 w-full max-w-md">
                   <p className="text-sm text-center">{welcomeText.suggestedQuestionsTitle}</p>
