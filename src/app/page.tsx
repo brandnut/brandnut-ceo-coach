@@ -22,7 +22,7 @@ import { getConversations, deleteConversation } from "@/lib/api";
 import { uploadFile, convertToVisionFiles } from "@/lib/file-upload";
 import type { AttachmentFile } from "@/types";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { getConfig } from '@/config/app';
+import { welcomeQuestions, welcomeText } from '@/config/app';
 
 interface Conversation {
   id: string;
@@ -34,7 +34,6 @@ interface Conversation {
 
 export default function ChatPage() {
   const [input, setInput] = useState("");
-  const config = getConfig(setInput);
   const { data: session, status } = useSession();
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -570,18 +569,18 @@ export default function ChatPage() {
             </div>
           ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-6 text-muted-foreground">
-              <span className="text-4xl">{config.app.icon}</span>
-              <span className="text-base font-medium">{config.welcome.startNewConversation}</span>
+              <span className="text-4xl">{welcomeText.greeting}</span>
+              <span className="text-base font-medium">{welcomeText.startNewConversation}</span>
               <div className="flex flex-col gap-2 w-full max-w-md">
-                <p className="text-sm text-center">{config.welcome.suggestedQuestionsTitle}</p>
+                <p className="text-sm text-center">{welcomeText.suggestedQuestionsTitle}</p>
                 <div className="flex flex-col gap-2 text-sm">
-                  {config.welcome.suggestedQuestions.map((question, index) => (
+                  {welcomeQuestions.map((question, index) => (
                     <div
                       key={index}
                       className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors"
-                      onClick={question.onClick}
+                      onClick={() => setInput(question)}
                     >
-                      {question.text}
+                      {question}
                     </div>
                   ))}
                 </div>
