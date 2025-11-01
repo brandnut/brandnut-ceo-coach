@@ -2,6 +2,7 @@ import NextAuth, { NextAuthConfig } from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcrypt'
 import pool from './db'
+import { guestMode } from '@/config/app'
 
 // Build trigger: v2
 
@@ -14,6 +15,17 @@ export const authConfig: NextAuthConfig = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
+        // Guest mode: 检查是否是guest自动登录
+        if (guestMode.enabled && guestMode.autoSignIn &&
+            credentials?.username === guestMode.username &&
+            credentials?.password === "guest") {
+          return {
+            id: '0',
+            name: guestMode.username,
+            role: 'user',
+          }
+        }
+
         if (!credentials?.username || !credentials?.password) {
           return null
         }
@@ -45,7 +57,7 @@ export const authConfig: NextAuthConfig = {
       },
     }),
   ],
-  pages: {
+  pages: guestMode.enabled ? {} : {
     signIn: '/login',
   },
   session: {

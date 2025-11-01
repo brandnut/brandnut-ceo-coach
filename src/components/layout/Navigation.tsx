@@ -12,6 +12,7 @@ import {
   LogoutOutlined,
 } from "@ant-design/icons";
 import { useState } from "react";
+import { guestMode } from "@/config/app";
 
 export default function Navigation() {
   const { data: session } = useSession();
@@ -32,6 +33,11 @@ export default function Navigation() {
       setLoading(false);
     }
   };
+
+  // Guest mode: 只显示基本信息，不显示个人资料和退出登录
+  if (guestMode.enabled && session?.user?.name === guestMode.username) {
+    return null; // Guest mode下完全不显示导航菜单
+  }
 
   const menuItems: MenuProps['items'] = [
     {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, Suspense } from "react";
-import { signOut, useSession } from "next-auth/react";
+import { signOut, useSession, signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Sender, Attachments, Conversations } from "@ant-design/x";
 import { Popover, Upload } from "antd";
@@ -51,11 +51,10 @@ function InstanceHandler({ onInstanceLoaded, onInstanceDataLoaded }: {
       console.log(`🔍 Fetching instance config for: ${instanceId}`);
 
       const response = await fetch(
-        `https://brandnut.cn/memory/api/v1/instance/${instanceId}`,
+        `/api/instance/${instanceId}`,
         {
           method: 'GET',
           headers: {
-            'X-API-Key': 'brandnut_246bdff1-e8a5-4daa-8928-21b849b8db57',
             'Accept': 'application/json',
           },
         }
@@ -94,18 +93,15 @@ export default function ChatPage() {
 
   // Guest mode auto sign in
   useEffect(() => {
-    if (guestMode.enabled && guestMode.autoSignIn && !session) {
-      // Create a mock guest session
-      const guestSession = {
-        user: {
-          name: guestMode.username,
-          role: 'user'
-        },
-        expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
-      };
-      // In guest mode, we'll handle this at the component level
+    if (guestMode.enabled && guestMode.autoSignIn && status === "unauthenticated") {
+      // Auto sign in as guest using credentials provider with empty credentials
+      signIn("credentials", {
+        username: guestMode.username,
+        password: "guest",
+        redirect: false,
+      });
     }
-  }, [session]);
+  }, [status]);
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConvId, setCurrentConvId] = useState<string | null>(null);
@@ -150,38 +146,10 @@ export default function ChatPage() {
     }
   }, [status, router]);
 
+  // LlamaIndex knowledge functionality removed
   useEffect(() => {
-    if (status !== "authenticated") return;
-
-    const fetchDocumentCount = async () => {
-      try {
-        const response = await fetch("/api/knowledge/documents");
-        if (!response.ok) {
-          throw new Error("Request failed");
-        }
-        const data = await response.json();
-        const files = Array.isArray(data?.files)
-          ? data.files
-          : Array.isArray(data)
-          ? data
-          : [];
-        setDocFiles(files);
-        const count =
-          typeof data?.total_count === "number"
-            ? data.total_count
-            : Array.isArray(files)
-            ? files.length
-            : 0;
-        setDocCountLabel(String(count));
-      } catch (error) {
-        console.error("Document count fetch error:", error);
-        setDocFiles([]);
-        setDocCountLabel(null);
-      }
-    };
-
-    fetchDocumentCount();
-  }, [status]);
+    // No-op - knowledge documents fetching disabled
+  }, []);
 
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -552,7 +520,7 @@ export default function ChatPage() {
     }
   };
 
-  if (status === "loading") {
+  if (status === "loading" && !guestMode.enabled) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         Loading...
@@ -560,7 +528,8 @@ export default function ChatPage() {
     );
   }
 
-  if (!session) {
+  // Guest mode: 允许在没有session时继续渲染
+  if (!session && !guestMode.enabled) {
     return null;
   }
 
