@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "src/app/api/instance/[id]/route.ts": {
+      "runtime": "nodejs18.x"
+    }
+  }
+}
