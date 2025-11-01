@@ -22,7 +22,7 @@ import { getConversations, deleteConversation } from "@/lib/api";
 import { uploadFile, convertToVisionFiles } from "@/lib/file-upload";
 import type { AttachmentFile } from "@/types";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { welcomeQuestions, welcomeText, difyInputs } from '@/config/app';
+import { welcomeQuestions, welcomeText, difyInputs, guestMode } from '@/config/app';
 
 interface Conversation {
   id: string;
@@ -91,6 +91,21 @@ export default function ChatPage() {
   const [instanceTitle, setInstanceTitle] = useState<string>("");
   const [instanceData, setInstanceData] = useState<any>(null);
   const { data: session, status } = useSession();
+
+  // Guest mode auto sign in
+  useEffect(() => {
+    if (guestMode.enabled && guestMode.autoSignIn && !session) {
+      // Create a mock guest session
+      const guestSession = {
+        user: {
+          name: guestMode.username,
+          role: 'user'
+        },
+        expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
+      };
+      // In guest mode, we'll handle this at the component level
+    }
+  }, [session]);
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConvId, setCurrentConvId] = useState<string | null>(null);
@@ -117,7 +132,12 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/login");
+      if (!guestMode.enabled) {
+        router.push("/login");
+      } else {
+        // Guest mode: load conversations directly
+        loadConversations();
+      }
     } else if (status === "authenticated") {
       loadConversations();
 
@@ -291,7 +311,8 @@ export default function ChatPage() {
     }
 
     // Call Dify stop API
-    if (currentTaskIdRef.current && session?.user?.name) {
+    const userName = guestMode.enabled ? guestMode.username : session?.user?.name;
+    if (currentTaskIdRef.current && userName) {
       try {
         await fetch("/api/chat/stop", {
           method: "POST",

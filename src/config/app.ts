@@ -53,6 +53,12 @@ export const difyInputs = {
   // 例如: { industry: "technology", region: "global" }
 };
 
+export const guestMode = {
+  enabled: true,
+  username: "guest",
+  autoSignIn: true,
+};
+
 export const appInfo = {
   name: "通用知识库",
   title: "通用知识库",
