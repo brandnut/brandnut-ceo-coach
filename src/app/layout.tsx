@@ -3,13 +3,12 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 import "@ant-design/v5-patch-for-react-19";
 import { appInfo } from "@/config/app";
-import { basePath } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: appInfo.title,
   description: appInfo.description,
   icons: {
-    icon: basePath ? `${basePath}/favicon.png` : '/favicon.png',
+    icon: '/favicon.png',
   },
 };
 
