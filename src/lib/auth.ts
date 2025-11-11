@@ -3,11 +3,13 @@ import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcrypt'
 import pool from './db'
 import { guestMode } from '@/config/app'
+import { basePath } from './config'
 
 // Build trigger: v2
 
 export const authConfig: NextAuthConfig = {
   trustHost: true, // Trust all hosts for production deployment
+  basePath: basePath || undefined, // Set base path for NextAuth routes
   providers: [
     Credentials({
       credentials: {

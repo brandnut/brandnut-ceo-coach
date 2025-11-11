@@ -596,7 +596,7 @@ const senderRef = useRef<any>(null);
         </div>
         <div>
           <Button
-            type="info"
+            type="default"
             onClick={startNewConversation}
             icon={<PlusOutlined />}
             block

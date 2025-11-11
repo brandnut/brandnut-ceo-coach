@@ -52,7 +52,8 @@
       "Bash(gh repo edit:*)",
       "Bash(open:*)",
       "Bash(yamllint:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(gh repo view:*)"
     ],
     "deny": [],
     "ask": []

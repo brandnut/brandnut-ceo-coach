@@ -18,6 +18,7 @@ ARG DATABASE_URL
 ARG LLAMAINDEX_API_BASE_URL
 ARG LLAMAINDEX_API_KEY
 ARG LLAMAINDEX_PIPELINE_ID
+ARG BASE_PATH
 
 # Create .env file from build arguments
 RUN echo "DIFY_API_URL=${DIFY_API_URL}" > .env && \
@@ -27,7 +28,8 @@ RUN echo "DIFY_API_URL=${DIFY_API_URL}" > .env && \
     echo "DATABASE_URL=${DATABASE_URL}" >> .env && \
     echo "LLAMAINDEX_API_BASE_URL=${LLAMAINDEX_API_BASE_URL}" >> .env && \
     echo "LLAMAINDEX_API_KEY=${LLAMAINDEX_API_KEY}" >> .env && \
-    echo "LLAMAINDEX_PIPELINE_ID=${LLAMAINDEX_PIPELINE_ID}" >> .env
+    echo "LLAMAINDEX_PIPELINE_ID=${LLAMAINDEX_PIPELINE_ID}" >> .env && \
+    echo "BASE_PATH=${BASE_PATH}" >> .env
 
 # Copy source code
 COPY . .
