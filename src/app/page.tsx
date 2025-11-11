@@ -814,7 +814,7 @@ const senderRef = useRef<any>(null);
                   <Attachments
                     items={attachments as any}
                     onChange={({ fileList }) => {
-                      setAttachments(fileList);
+                      setAttachments(fileList as AttachmentFile[]);
                     }}
                     onRemove={(item) => {
                       if (item.url?.startsWith('blob:')) {
