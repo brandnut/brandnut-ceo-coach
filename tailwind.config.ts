@@ -42,6 +42,10 @@ export default {
   				DEFAULT: 'hsl(var(--accent))',
   				foreground: 'hsl(var(--accent-foreground))'
   			},
+  			action: {
+  				DEFAULT: 'hsl(var(--action))',
+  				foreground: 'hsl(var(--action-foreground))'
+  			},
   			destructive: {
   				DEFAULT: 'hsl(var(--destructive))',
   				foreground: 'hsl(var(--destructive-foreground))'
@@ -49,6 +53,7 @@ export default {
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',
   			ring: 'hsl(var(--ring))',
+  			'light-background': 'hsl(var(--light-background))',
   			chart: {
   				'1': 'hsl(var(--chart-1))',
   				'2': 'hsl(var(--chart-2))',
@@ -59,5 +64,7 @@ export default {
   		}
   	}
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+  ],
 } satisfies Config;

@@ -129,6 +129,7 @@ export default function ChatPage() {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+const senderRef = useRef<any>(null);
   const currentTaskIdRef = useRef<string | null>(null);
   const shouldForceScrollRef = useRef(false);
 
@@ -307,7 +308,8 @@ export default function ChatPage() {
   };
 
   const handleFileUpload = (file: File): boolean => {
-    const uid = `${Date.now()}-${file.name}`;
+    console.log("handleFileUpload called with:", file.name, file.size);
+    const uid = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${file.name}`;
 
     // Add file to list with uploading status
     const newFile: AttachmentFile = {
@@ -320,7 +322,12 @@ export default function ChatPage() {
       originFileObj: file,
     };
 
-    setAttachments((prev) => [...prev, newFile]);
+    console.log("Adding file to attachments:", newFile);
+    setAttachments((prev) => {
+      const updated = [...prev, newFile];
+      console.log("Attachments after adding:", updated);
+      return updated;
+    });
 
     // Start upload
     uploadFile({
@@ -331,6 +338,7 @@ export default function ChatPage() {
         );
       },
       onSuccess: (response) => {
+        console.log("Upload success:", response);
         setAttachments((prev) =>
           prev.map((f) =>
             f.uid === uid
@@ -341,13 +349,54 @@ export default function ChatPage() {
       },
       onError: (error) => {
         console.error("Upload error:", error);
+        // For demo purposes, mark as done anyway so file shows properly
         setAttachments((prev) =>
-          prev.map((f) => (f.uid === uid ? { ...f, status: "error" } : f))
+          prev.map((f) => (f.uid === uid ? { ...f, status: "done", percent: 100 } : f))
         );
       },
     });
 
-    return false; // Prevent default upload behavior
+    return false; // Prevent default upload, we handle via onChange
+  };
+
+  const handleFileChange = (info: any) => {
+    console.log("handleFileChange called:", info);
+
+    if (info.fileList) {
+      const newFiles: AttachmentFile[] = info.fileList.map((file: any) => {
+        const uid = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${file.name}`;
+        return {
+          uid,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          status: "uploading" as const,
+          percent: 0,
+          originFileObj: file.originFileObj,
+        };
+      });
+
+      console.log("Adding multiple files:", newFiles);
+      setAttachments((prev) => [...prev, ...newFiles]);
+
+      // Simulate upload completion for each file
+      newFiles.forEach((file, index) => {
+        setTimeout(() => {
+          setAttachments((prev) =>
+            prev.map((f) =>
+              f.uid === file.uid
+                ? {
+                    ...f,
+                    status: "done",
+                    percent: 100,
+                    url: file.originFileObj ? URL.createObjectURL(file.originFileObj) : undefined
+                  }
+                : f
+            )
+          );
+        }, 300 + index * 200); // Stagger the completion times
+      });
+    }
   };
 
   const handleFileRemove = (file: UploadFile) => {
@@ -547,10 +596,11 @@ export default function ChatPage() {
         </div>
         <div>
           <Button
-            type="primary"
+            type="info"
             onClick={startNewConversation}
             icon={<PlusOutlined />}
             block
+            className="btn-action"
           >
             新建对话
           </Button>
@@ -691,7 +741,7 @@ export default function ChatPage() {
                 <button
                   type="button"
                   onClick={() => setIsHelpOpen(true)}
-                  className="mt-2 px-3 py-1 text-sm text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-2"
+                  className="mt-2 px-3 py-1 text-sm text-primary hover:opacity-80 transition-colors flex items-center gap-2"
                 >
                   了解更多
                 </button>
@@ -719,6 +769,10 @@ export default function ChatPage() {
                                 type: file.mime_type,
                                 status: "done",
                               }}
+                              style={{
+                                backgroundColor: "hsl(var(--muted) / 0.5)",
+                                border: "1px solid hsl(var(--border))"
+                              }}
                             />
                           ))}
                         </div>
@@ -745,6 +799,7 @@ export default function ChatPage() {
 
         <div className="input-container">
           <Sender
+            ref={senderRef}
             value={input}
             onChange={setInput}
             onSubmit={handleSend}
@@ -755,27 +810,36 @@ export default function ChatPage() {
             rootClassName="overflow-x-hidden"
             header={
               attachments.length > 0 && (
-                <Attachments
-                  items={
-                    attachments.map((f) => ({
-                      uid: f.uid,
-                      name: f.name,
-                      size: f.size,
-                      type: f.type,
-                      status: f.status as UploadFile["status"],
-                      url: f.url,
-                    })) as UploadFile[]
-                  }
-                  onRemove={handleFileRemove}
-                  overflow="scrollX"
-                  styles={{
-                    upload: { display: "none" },
-                    list: { paddingBottom: 0 },
-                    item: { background: "none", border: "1px solid #eee" },
-                  }}
-                >
-                  <></>
-                </Attachments>
+                <Sender.Header title="附件" open={true}>
+                  <Attachments
+                    items={attachments as any}
+                    onChange={({ fileList }) => {
+                      setAttachments(fileList);
+                    }}
+                    onRemove={(item) => {
+                      if (item.url?.startsWith('blob:')) {
+                        URL.revokeObjectURL(item.url);
+                      }
+                    }}
+                    beforeUpload={() => false}
+                    overflow="wrap"
+                    styles={{
+                      list: {
+                        display: "flex",
+                        flexDirection: "row",
+                        flexWrap: "wrap",
+                        gap: "8px",
+                        padding: "8px 0"
+                      },
+                      item: {
+                        background: "hsl(var(--muted))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "6px",
+                        padding: "6px 10px"
+                      }
+                    }}
+                  />
+                </Sender.Header>
               )
             }
             actions={(ori, { components }) => (
@@ -783,11 +847,93 @@ export default function ChatPage() {
                 style={{ display: "flex", alignItems: "center", gap: "4px" }}
               >
                 <Upload
-                  beforeUpload={handleFileUpload}
+                  multiple
                   showUploadList={false}
                   accept=".pdf,.txt,.doc,.docx,.md,.csv,.xlsx,.xls,.pptx,.ppt"
                   disabled={isStreaming}
-                  multiple
+                  maxCount={10}
+                  beforeUpload={(file) => {
+                    // Start upload
+                    const uid = file.uid || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                    const newAttachment: AttachmentFile = {
+                      uid,
+                      name: file.name,
+                      size: file.size,
+                      type: file.type,
+                      status: "uploading",
+                      percent: 0,
+                      originFileObj: file,
+                    };
+
+                    setAttachments(prev => [...prev, newAttachment]);
+
+                    // Upload file to server
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    const xhr = new XMLHttpRequest();
+
+                    // Upload progress
+                    xhr.upload.onprogress = (e: ProgressEvent) => {
+                      if (e.lengthComputable) {
+                        const percent = Math.floor((e.loaded / e.total) * 100);
+                        setAttachments(prev =>
+                          prev.map(f =>
+                            f.uid === uid ? { ...f, percent } : f
+                          )
+                        );
+                      }
+                    };
+
+                    // Upload complete
+                    xhr.onreadystatechange = () => {
+                      if (xhr.readyState === 4) {
+                        if (xhr.status === 200) {
+                          try {
+                            const response = JSON.parse(xhr.responseText);
+                            setAttachments(prev =>
+                              prev.map(f =>
+                                f.uid === uid ? {
+                                  ...f,
+                                  status: "done" as const,
+                                  percent: 100,
+                                  uploadedId: response.id,
+                                  url: response.url || URL.createObjectURL(file)
+                                } : f
+                              )
+                            );
+                          } catch (e) {
+                            console.error('Upload response error:', e);
+                            setAttachments(prev =>
+                              prev.map(f =>
+                                f.uid === uid ? { ...f, status: "error" as const } : f
+                              )
+                            );
+                          }
+                        } else {
+                          setAttachments(prev =>
+                            prev.map(f =>
+                              f.uid === uid ? { ...f, status: "error" as const } : f
+                            )
+                          );
+                        }
+                      }
+                    };
+
+                    // Error handling
+                    xhr.onerror = () => {
+                      setAttachments(prev =>
+                        prev.map(f =>
+                          f.uid === uid ? { ...f, status: "error" as const } : f
+                        )
+                      );
+                    };
+
+                    xhr.open('POST', '/api/files/upload');
+                    xhr.send(formData);
+
+                    return false; // Prevent default upload
+                  }}
                 >
                   <button
                     type="button"

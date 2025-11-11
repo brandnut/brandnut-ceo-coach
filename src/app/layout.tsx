@@ -7,6 +7,9 @@ import { appInfo } from "@/config/app";
 export const metadata: Metadata = {
   title: appInfo.title,
   description: appInfo.description,
+  icons: {
+    icon: '/favicon.png',
+  },
 };
 
 export default function RootLayout({

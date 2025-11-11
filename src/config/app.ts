@@ -26,7 +26,7 @@ export const guestMode = {
 };
 
 export const appInfo = {
-  name: "品核 AI Chat",
-  title: "品核 AI Chat",
+  name: "宠物博士 - 品核 AI CEO 教练",
+  title: "宠物博士 - 品核 AI CEO 教练",
   description: "释放品牌真潜能、企业级记忆协同",
 };
