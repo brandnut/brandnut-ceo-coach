@@ -437,3 +437,67 @@ body {
   border-color: hsl(var(--action) / 0.7) !important;
   transform: translateY(0);
 }
+
+/* Mobile viewport optimizations */
+@supports (-webkit-touch-callout: none) {
+  /* Prevent iOS Safari from zooming on input focus */
+  .input,
+  textarea,
+  select {
+    font-size: 16px !important;
+    transform-origin: left top;
+    transform: scale(1) !important;
+  }
+
+  /* Ensure input elements don't trigger zoom */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Prevent viewport scaling on landscape orientation */
+  @media screen and (orientation: landscape) {
+    html {
+      -webkit-text-size-adjust: 100%;
+    }
+  }
+}
+
+/* Prevent zoom on all mobile devices */
+@media screen and (max-width: 768px) {
+  .input,
+  textarea,
+  select {
+    font-size: 16px !important;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Ensure consistent input sizing */
+  .input:focus,
+  textarea:focus,
+  select:focus {
+    font-size: 16px !important;
+  }
+}
+
+/* Prevent double-tap zoom */
+body {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Allow text selection in inputs */
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}

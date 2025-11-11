@@ -21,6 +21,10 @@ export const tutorialMarkdown = `# 👋 欢迎使用品核 AI —— CEO 教练
    它能记住你在对话中提到的事实与偏好，  
    理解你的表达方式与思考习惯，  
    随时间推移，越来越懂你和你的企业，是你的长期顾问。
+   可以尝试告诉它：
+   > 你的名字
+   > 你喜欢的书籍、商业 IP、公司
+   > 你团队的情况
 
 4. 🪞 **能切换思考模式**  
    - 当你困惑时，它用提问引导你理清思路；  
@@ -57,30 +61,30 @@ export const tutorialMarkdown = `# 👋 欢迎使用品核 AI —— CEO 教练
 `;
 
 export const welcomeQuestions = [
-  "我怎么判断，现在该“扩张”还是“收缩”？",
-  "我的团队越来越执行型，思考力在下降，该怎么办？",
-  "品牌信任已经建立，但增长趋缓，我该做什么第二曲线？",
+   "我怎么判断，现在该“扩张”还是“收缩”？",
+   "我的团队越来越执行型，思考力在下降，该怎么办？",
+   "品牌信任已经建立，但增长趋缓，我该做什么第二曲线？",
 ];
 
 export const welcomeText = {
-  greeting: "👋",
-  startNewConversation: "开始新对话",
-  suggestedQuestionsTitle: "您可以尝试询问以下问题：",
+   greeting: "👋",
+   startNewConversation: "开始新对话",
+   suggestedQuestionsTitle: "您可以尝试询问以下问题：",
 };
 
 export const difyInputs = {
-  // Dify 变量配置
-  // 例如: { industry: "technology", region: "global" }
+   // Dify 变量配置
+   // 例如: { industry: "technology", region: "global" }
 };
 
 export const guestMode = {
-  enabled: true,
-  username: "guest",
-  autoSignIn: true,
+   enabled: true,
+   username: "guest",
+   autoSignIn: true,
 };
 
 export const appInfo = {
-  name: "宠物博士 - 品核 AI CEO 教练",
-  title: "宠物博士 - 品核 AI CEO 教练",
-  description: "释放品牌真潜能、企业级记忆协同",
+   name: "宠物博士 - 品核 AI CEO 教练",
+   title: "宠物博士 - 品核 AI CEO 教练",
+   description: "释放品牌真潜能、企业级记忆协同",
 };
