@@ -63,14 +63,19 @@ export function createRefreshToken(
   return jwt.sign(toEncode, SECRET_KEY, { algorithm: ALGORITHM })
 }
 
-// 验证 JWT 令牌 - 照搬 brandnut-ops
-export function verifyToken(token: string): TokenPayload | null {
+// 验证 JWT 令牌 - 改进版，区分过期和无效
+export function verifyToken(token: string): { payload: TokenPayload | null, error: 'expired' | 'invalid' | null } {
   try {
     const payload = jwt.verify(token, SECRET_KEY, { algorithms: [ALGORITHM] }) as TokenPayload
-    return payload
-  } catch (error) {
-    console.error('JWT verification failed:', error)
-    return null
+    return { payload, error: null }
+  } catch (error: any) {
+    if (error.name === 'TokenExpiredError') {
+      return { payload: null, error: 'expired' }
+    } else if (error.name === 'JsonWebTokenError') {
+      return { payload: null, error: 'invalid' }
+    } else {
+      return { payload: null, error: 'invalid' }
+    }
   }
 }
 

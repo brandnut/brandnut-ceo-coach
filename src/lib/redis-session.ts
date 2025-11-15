@@ -23,14 +23,11 @@ export async function storeAccessToken(
   // Ops使用原始token作为key，不是hash！
   const key = `access_token:${token}`
 
-  const tokenData: StoredToken = {
-    userId: user.id,
-    type: 'access',
-    username: user.username,
-    email: user.email,
-    role: user.role,
-    createdAt: Date.now(),
-    expiresAt: Date.now() + 30 * 60 * 1000, // 30分钟
+  // 完全照搬Ops的数据结构 - 简洁明了
+  const tokenData = {
+    user_id: user.id,
+    created_at: new Date().toISOString(),
+    expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30分钟
     is_revoked: false
   }
 
@@ -41,22 +38,18 @@ export async function storeAccessToken(
   await redis.sadd(`user_session:${user.id}:access_tokens`, token)
 }
 
-// 存储刷新令牌 - 照搬 brandnut-ops
+// 存储刷新令牌 - 统一使用原始token做key，和Ops保持一致
 export async function storeRefreshToken(
   token: string,
   user: User
 ): Promise<void> {
-  const tokenHash = hashToken(token)
-  const key = `refresh_token:${tokenHash}`
+  const key = `refresh_token:${token}`
 
-  const tokenData: StoredToken = {
-    userId: user.id,
-    type: 'refresh',
-    username: user.username,
-    email: user.email,
-    role: user.role,
-    createdAt: Date.now(),
-    expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7天
+  // 完全照搬Ops的数据结构
+  const tokenData = {
+    user_id: user.id,
+    created_at: new Date().toISOString(),
+    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7天
     is_revoked: false
   }
 
@@ -107,17 +100,26 @@ export async function verifyAccessToken(token: string): Promise<StoredToken | nu
   }
 }
 
-// 验证刷新令牌是否在 Redis 中有效 - 照搬 brandnut-ops
-export async function verifyRefreshToken(token: string): Promise<StoredToken | null> {
-  const tokenHash = hashToken(token)
-  const key = `refresh_token:${tokenHash}`
+// 验证刷新令牌是否在 Redis 中有效 - 使用原始token
+export async function verifyRefreshToken(token: string): Promise<any | null> {
+  const key = `refresh_token:${token}`
 
   try {
     const data = await redis.get(key)
     if (!data) {
       return null
     }
-    return JSON.parse(data) as StoredToken
+
+    const tokenData = JSON.parse(data)
+    if (tokenData.is_revoked) {
+      return null
+    }
+
+    // 返回Ops格式的数据，包含userId字段用于兼容
+    return {
+      ...tokenData,
+      userId: tokenData.user_id  // 兼容字段
+    }
   } catch (error) {
     console.error('Refresh token verification failed:', error)
     return null

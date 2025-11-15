@@ -3,7 +3,10 @@ import { guestMode } from '@/config/app'
 
 let pool: Pool | null = null
 
-if (!guestMode.enabled && process.env.DATABASE_URL) {
+// 优先使用环境变量覆盖，然后检查guestMode
+const guestModeEnabled = process.env.GUEST_MODE_ENABLED === 'false' ? false : guestMode.enabled
+
+if (!guestModeEnabled && process.env.DATABASE_URL) {
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
   })

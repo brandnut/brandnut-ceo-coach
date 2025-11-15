@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from './jwt-security'
-import { verifyAccessToken } from './redis-session'
-
-// 认证中间件 - 照搬 brandnut-ops 的双重验证机制
+import { getUserById } from './db/queries'
 
 export interface AuthenticatedUser {
   id: string
@@ -11,51 +9,69 @@ export interface AuthenticatedUser {
   role: string
 }
 
-// 验证 JWT Token 并检查 Redis 状态 - 照搬 brandnut-ops
-export async function verifyAuthToken(authorization: string | null): Promise<AuthenticatedUser | null> {
+// 简化认证流程 - 返回用户和错误信息
+export async function verifyAuthToken(authorization: string | null): Promise<{ user: AuthenticatedUser | null, error: 'INVALID_TOKEN' | 'TOKEN_EXPIRED' | 'ACCOUNT_INACTIVE' | null }> {
   if (!authorization) {
-    return null
+    return { user: null, error: 'INVALID_TOKEN' }
   }
 
   // 提取 Bearer token
   const token = authorization.replace('Bearer ', '')
   if (!token) {
-    return null
+    return { user: null, error: 'INVALID_TOKEN' }
   }
 
-  // 第一层验证：JWT 签名
-  const jwtPayload = verifyToken(token)
+  // 验证 JWT 签名
+  const jwtResult = verifyToken(token)
+  if (jwtResult.error) {
+    return { user: null, error: jwtResult.error === 'expired' ? 'TOKEN_EXPIRED' : 'INVALID_TOKEN' }
+  }
+
+  const jwtPayload = jwtResult.payload
   if (!jwtPayload || jwtPayload.type !== 'access') {
-    return null
+    return { user: null, error: 'INVALID_TOKEN' }
   }
 
-  // 第二层验证：Redis 状态检查
-  const storedToken = await verifyAccessToken(token)
-  if (!storedToken) {
-    return null
+  // 从JWT获取用户ID
+  const userId = jwtPayload.sub
+  if (!userId) {
+    return { user: null, error: 'INVALID_TOKEN' }
   }
 
-  // 返回用户信息
+  // 从数据库获取用户信息
+  const user = await getUserById(userId)
+  if (!user) {
+    return { user: null, error: 'INVALID_TOKEN' }
+  }
+
+  if (!user.is_active) {
+    return { user: null, error: 'ACCOUNT_INACTIVE' }
+  }
+
   return {
-    id: storedToken.userId,
-    username: storedToken.username,
-    email: storedToken.email,
-    role: storedToken.role
+    user: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.is_superuser ? 'admin' : 'user'
+    },
+    error: null
   }
 }
 
 // API 路由辅助函数 - 获取当前用户
-export async function getCurrentUser(request: NextRequest): Promise<AuthenticatedUser | null> {
+export async function getCurrentUser(request: NextRequest): Promise<{ user: AuthenticatedUser | null, error: 'INVALID_TOKEN' | 'TOKEN_EXPIRED' | 'ACCOUNT_INACTIVE' | null }> {
   const authorization = request.headers.get('Authorization')
   return await verifyAuthToken(authorization)
 }
 
-// 统一的错误响应
-export function createAuthErrorResponse(message: string, status: number = 401) {
+// 统一的错误响应 - 支持错误码
+export function createAuthErrorResponse(message: string, code: 'INVALID_TOKEN' | 'TOKEN_EXPIRED' | 'ACCOUNT_INACTIVE' = 'INVALID_TOKEN', status: number = 401) {
   return NextResponse.json(
     {
-      error: 'Authentication failed',
-      message
+      error: status === 401 ? 'Unauthorized' : 'Forbidden',
+      message,
+      code
     },
     { status }
   )

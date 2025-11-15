@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "docs": "node docs/swagger-config.js",
+    "docs:serve": "npm run dev --port 3001"
   },
   "nextBundleAnalysis": {
     "analyzeServerBundle": true
