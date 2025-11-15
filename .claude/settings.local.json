@@ -54,7 +54,9 @@
       "Bash(yamllint:*)",
       "Bash(python3:*)",
       "Bash(gh repo view:*)",
-      "Bash(BASE_PATH=/ceo-coach-demo npm run dev:*)"
+      "Bash(BASE_PATH=/ceo-coach-demo npm run dev:*)",
+      "Bash(tmutil listlocalsnapshotsfordate:*)",
+      "Bash(docker system:*)"
     ],
     "deny": [],
     "ask": []

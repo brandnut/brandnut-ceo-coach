@@ -1,93 +1,73 @@
-import NextAuth, { NextAuthConfig } from 'next-auth'
-import Credentials from 'next-auth/providers/credentials'
-import bcrypt from 'bcrypt'
-import pool from './db'
-import { guestMode } from '@/config/app'
+import { getCurrentUser } from '@/lib/auth-middleware'
+import { cookies } from 'next/headers'
 
-// Build trigger: v2
+// 替换 NextAuth 的 auth 函数，使用 JWT 验证
+export async function auth() {
+  try {
+    // 从请求头中获取 Authorization token
+    const headersList = cookies()
+    let authorization: string | null = null
 
-export const authConfig: NextAuthConfig = {
-  trustHost: true, // Trust all hosts for production deployment
-  providers: [
-    Credentials({
-      credentials: {
-        username: { label: 'Username', type: 'text' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials) {
-        // Guest mode: 检查是否是guest自动登录
-        if (guestMode.enabled && guestMode.autoSignIn &&
-            credentials?.username === guestMode.username &&
-            credentials?.password === "guest") {
-          return {
-            id: '0',
-            name: guestMode.username,
-            role: 'user',
-          }
+    // 尝试从 cookie 中获取
+    const authCookie = headersList.get('next-auth.session-token')
+    if (authCookie) {
+      authorization = `Bearer ${authCookie}`
+    }
+
+    // 如果没有 cookie，尝试从请求上下文获取
+    if (!authorization) {
+      // 这是一个临时方案，更好的做法是在 middleware 中处理
+      return null
+    }
+
+    const user = await getCurrentUser({
+      headers: {
+        get: (key: string) => {
+          if (key === 'authorization') return authorization
+          return headersList.get(key)
         }
-
-        // If guest mode is enabled, skip database operations entirely
-        if (guestMode.enabled) {
-          console.log('Guest mode enabled, skipping database authentication');
-          return null;
-        }
-
-        if (!credentials?.username || !credentials?.password) {
-          return null
-        }
-
-        if (!pool) {
-          console.error('Database not available in auth');
-          return null;
-        }
-
-        const result = await pool.query(
-          'SELECT * FROM users WHERE username = $1',
-          [credentials.username]
-        )
-
-        const user = result.rows[0]
-        if (!user) {
-          return null
-        }
-
-        const passwordMatch = await bcrypt.compare(
-          credentials.password as string,
-          user.password_hash
-        )
-
-        if (!passwordMatch) {
-          return null
-        }
-
-        return {
-          id: user.id.toString(),
-          name: user.username,
-          role: user.role || 'user', // 确保向后兼容
-        }
-      },
-    }),
-  ],
-  pages: guestMode.enabled ? {} : {
-    signIn: '/login',
-  },
-  session: {
-    strategy: 'jwt',
-  },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.role = user.role
       }
-      return token
-    },
-    async session({ session, token }) {
-      if (session.user && token.role) {
-        session.user.role = token.role as 'admin' | 'user'
+    } as any)
+
+    if (!user) {
+      return null
+    }
+
+    // 转换为 NextAuth 兼容的 session 格式
+    return {
+      user: {
+        id: user.id,
+        name: user.username,
+        email: user.email,
+        role: user.role as 'admin' | 'user'
       }
-      return session
-    },
-  },
+    }
+  } catch (error) {
+    console.error('Auth error:', error)
+    return null
+  }
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth(authConfig)
+// 导出其他 NextAuth 相关函数（如果需要）
+export const handlers = {
+  GET: () => new Response('NextAuth handlers replaced with JWT system', { status: 200 }),
+  POST: () => new Response('NextAuth handlers replaced with JWT system', { status: 200 })
+}
+
+export const signIn = () => {
+  return new Response('Use Brandnut Ops for sign in', { status: 404 })
+}
+
+export const signOut = () => {
+  return new Response('Use Brandnut Ops sign out', { status: 404 })
+}
+
+// 保持向后兼容，但使用 JWT 系统
+export const authConfig = {
+  // 空配置，因为我们不使用 NextAuth
+}
+
+// 新增：便捷函数，供直接使用
+export async function getCurrentUserFromRequest(request: Request) {
+  return await getCurrentUser(request as any)
+}

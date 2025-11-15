@@ -5,7 +5,25 @@ import { guestMode } from '@/config/app'
 export default async function middleware(req: NextRequest) {
   // Guest mode disabled, use normal auth flow
   if (!guestMode.enabled) {
-    // 这里可以保留原来的认证逻辑作为备用
+    // Edge Middleware 中只做简单验证，具体 JWT 验证在 API 路由中处理
+
+    // 对 API 路由进行基础检查
+    if (req.nextUrl.pathname.startsWith('/api/') &&
+        !req.nextUrl.pathname.startsWith('/api/auth/')) {
+
+      // 检查 Authorization header
+      const authorization = req.headers.get('Authorization')
+      if (!authorization || !authorization.startsWith('Bearer ')) {
+        return NextResponse.json(
+          {
+            error: 'Unauthorized',
+            message: 'Valid authentication token required'
+          },
+          { status: 401 }
+        )
+      }
+    }
+
     return NextResponse.next()
   }
 
@@ -17,12 +35,10 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * _next/static (static files)
+     * - _next/static (static files)
      * _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-    '/',  // Explicitly match root path
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 }
