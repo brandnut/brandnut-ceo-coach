@@ -73,7 +73,7 @@ export const difyInputs = {
 };
 
 export const guestMode = {
-   enabled: true,
+   enabled: false,
    username: "guest",
    autoSignIn: true,
 };
