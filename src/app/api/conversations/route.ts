@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserFromRequest } from '@/lib/auth'
+import { getUserChatConfig } from '@/lib/db/queries'
 
 export async function GET(req: NextRequest) {
   const session = {
@@ -10,6 +11,22 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // 获取用户的组织聊天配置
+    let chatConfig = null
+    try {
+      chatConfig = await getUserChatConfig(session.user.id)
+    } catch (error) {
+      console.error('Failed to get user chat config:', error)
+    }
+
+    // 向后兼容：如果没有组织配置，使用全局环境变量
+    const apiUrl = chatConfig?.chat_api_url || process.env.DIFY_API_URL
+    const apiKey = chatConfig?.chat_api_key || process.env.DIFY_API_KEY
+
+    if (!apiUrl || !apiKey) {
+      return NextResponse.json({ error: 'Chat API configuration not found' }, { status: 500 })
+    }
+
     const searchParams = req.nextUrl.searchParams
     const lastId = searchParams.get('last_id') || ''
     const limit = searchParams.get('limit') || '20'
@@ -23,10 +40,10 @@ export async function GET(req: NextRequest) {
     }
 
     const response = await fetch(
-      `${process.env.DIFY_API_URL}/conversations?${params}`,
+      `${apiUrl}/conversations?${params}`,
       {
         headers: {
-          Authorization: `Bearer ${process.env.DIFY_API_KEY}`,
+          Authorization: `Bearer ${apiKey}`,
         },
       }
     )

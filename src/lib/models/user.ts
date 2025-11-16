@@ -82,3 +82,22 @@ export interface UserOrganizationResponse {
   role: string;
   joined_at: string;
 }
+
+// 组织聊天配置
+export interface OrganizationChatConfig {
+  id: string;
+  organization_id: string;
+  chat_api_url: string;
+  chat_api_key: string;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// 用户聊天配置（包含组织信息）
+export interface UserChatConfig {
+  chat_api_url: string;
+  chat_api_key: string;
+  organization_name: string;
+  organization_id: string;
+}

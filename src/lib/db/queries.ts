@@ -1,5 +1,5 @@
 import pool from '@/lib/db'
-import { User, UserWithInternal, Organization, UserRole, UserOrganizationWithRole } from '@/lib/models/user'
+import { User, UserWithInternal, Organization, UserRole, UserOrganizationWithRole, OrganizationChatConfig, UserChatConfig } from '@/lib/models/user'
 
 // 用户查询函数
 export async function getUserById(userId: string): Promise<UserWithInternal | null> {
@@ -141,6 +141,121 @@ export async function getUserByToken(token: string): Promise<User | null> {
     return userResponse
   } catch (error) {
     console.error('Error getting user by token:', error)
+    throw error
+  }
+}
+
+// 组织聊天配置查询函数
+export async function getUserChatConfig(userId: string): Promise<UserChatConfig | null> {
+  if (!pool) {
+    throw new Error('Database not available')
+  }
+
+  try {
+    // 联表查询：user -> user_organizations -> organization_chat_config
+    const query = `
+      SELECT
+        occ.chat_api_url,
+        occ.chat_api_key,
+        o.name as organization_name,
+        o.id as organization_id
+      FROM user_organizations uo
+      LEFT JOIN organizations o ON uo.organization_id = o.id
+      LEFT JOIN organization_chat_configs occ ON uo.organization_id = occ.organization_id
+      WHERE uo.user_id = $1
+      ORDER BY uo.joined_at DESC
+      LIMIT 1
+    `
+
+    const result = await pool.query(query, [userId])
+
+    if (result.rows.length === 0) {
+      return null
+    }
+
+    const config = result.rows[0]
+
+    // 如果没有组织聊天配置，返回null
+    if (!config.chat_api_url || !config.chat_api_key) {
+      return null
+    }
+
+    return {
+      chat_api_url: config.chat_api_url,
+      chat_api_key: config.chat_api_key,
+      organization_name: config.organization_name,
+      organization_id: config.organization_id
+    }
+  } catch (error) {
+    console.error('Error getting user chat config:', error)
+    throw error
+  }
+}
+
+export async function getOrganizationChatConfig(organizationId: string): Promise<OrganizationChatConfig | null> {
+  if (!pool) {
+    throw new Error('Database not available')
+  }
+
+  try {
+    const query = `
+      SELECT
+        id,
+        organization_id,
+        chat_api_url,
+        chat_api_key,
+        is_active,
+        created_at,
+        updated_at
+      FROM organization_chat_configs
+      WHERE organization_id = $1
+    `
+
+    const result = await pool.query(query, [organizationId])
+
+    if (result.rows.length === 0) {
+      return null
+    }
+
+    return result.rows[0] as OrganizationChatConfig
+  } catch (error) {
+    console.error('Error getting organization chat config:', error)
+    throw error
+  }
+}
+
+export async function createOrganizationChatConfig(
+  organizationId: string,
+  chatApiUrl: string,
+  chatApiKey: string
+): Promise<OrganizationChatConfig> {
+  if (!pool) {
+    throw new Error('Database not available')
+  }
+
+  try {
+    const query = `
+      INSERT INTO organization_chat_configs (organization_id, chat_api_url, chat_api_key)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (organization_id)
+      DO UPDATE SET
+        chat_api_url = EXCLUDED.chat_api_url,
+        chat_api_key = EXCLUDED.chat_api_key,
+        updated_at = now()
+      RETURNING
+        id,
+        organization_id,
+        chat_api_url,
+        chat_api_key,
+        is_active,
+        created_at,
+        updated_at
+    `
+
+    const result = await pool.query(query, [organizationId, chatApiUrl, chatApiKey])
+    return result.rows[0] as OrganizationChatConfig
+  } catch (error) {
+    console.error('Error creating organization chat config:', error)
     throw error
   }
 }

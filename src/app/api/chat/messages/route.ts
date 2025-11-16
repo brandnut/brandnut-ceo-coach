@@ -1,11 +1,18 @@
 import { NextRequest } from 'next/server'
-import { auth } from '@/lib/auth'
+import { getCurrentUser } from '@/lib/auth-middleware'
 import { streamText } from 'ai'
+import { getUserChatConfig } from '@/lib/db/queries'
 
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) {
-    return new Response('Unauthorized', { status: 401 })
+  const authResult = await getCurrentUser(req as any)
+  if (!authResult.user) {
+    if (authResult.error === 'TOKEN_EXPIRED') {
+      return new Response('Access token expired', { status: 401 })
+    } else if (authResult.error === 'ACCOUNT_INACTIVE') {
+      return new Response('Account inactive', { status: 403 })
+    } else {
+      return new Response('Unauthorized', { status: 401 })
+    }
   }
 
   try {
@@ -16,16 +23,32 @@ export async function POST(req: NextRequest) {
       return new Response('Empty message', { status: 400 })
     }
 
-    const response = await fetch(`${process.env.DIFY_API_URL}/chat-messages`, {
+    // 获取用户的组织聊天配置
+    let chatConfig = null
+    try {
+      chatConfig = await getUserChatConfig(authResult.user.id)
+    } catch (error) {
+      console.error('Failed to get user chat config:', error)
+    }
+
+    // 向后兼容：如果没有组织配置，使用全局环境变量
+    const apiUrl = chatConfig?.chat_api_url || process.env.DIFY_API_URL
+    const apiKey = chatConfig?.chat_api_key || process.env.DIFY_API_KEY
+
+    if (!apiUrl || !apiKey) {
+      return new Response('Chat API configuration not found', { status: 500 })
+    }
+
+    const response = await fetch(`${apiUrl}/chat-messages`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.DIFY_API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         inputs,
         query,
-        user: session.user.name,
+        user: authResult.user.username,
         conversation_id: conversationId,
         files,
         response_mode: 'streaming',
