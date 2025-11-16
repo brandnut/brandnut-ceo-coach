@@ -1,8 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
 import { Dropdown, Avatar, Button, Space, Divider, message } from "antd";
 import type { MenuProps } from "antd";
 import {
@@ -12,20 +10,18 @@ import {
   LogoutOutlined,
 } from "@ant-design/icons";
 import { useState } from "react";
+import { useApp } from "@/contexts/AppContext";
 import { guestMode } from "@/config/app";
 
 export default function Navigation() {
-  const { data: session } = useSession();
+  const { me, logout } = useApp();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const handleLogout = async () => {
     setLoading(true);
     try {
-      await signOut({
-        callbackUrl: "/login",
-        redirect: true,
-      });
+      await logout();
       message.success("已退出登录");
     } catch (error) {
       message.error("退出失败");
@@ -35,8 +31,12 @@ export default function Navigation() {
   };
 
   // Guest mode: 只显示基本信息，不显示个人资料和退出登录
-  if (guestMode.enabled && session?.user?.name === guestMode.username) {
+  if (guestMode.enabled) {
     return null; // Guest mode下完全不显示导航菜单
+  }
+
+  if (!me) {
+    return null; // 未登录时隐藏导航菜单
   }
 
   const menuItems: MenuProps['items'] = [
@@ -46,17 +46,7 @@ export default function Navigation() {
       label: "个人资料",
       onClick: () => router.push("/profile"),
     },
-    ...(session?.user?.role === "admin"
-      ? [
-          {
-            key: "admin-users",
-            icon: <TeamOutlined />,
-            label: "用户管理",
-            onClick: () => router.push("/admin/users"),
-          },
-        ]
-      : []),
-    {
+        {
       type: "divider",
     },
     {
@@ -68,8 +58,6 @@ export default function Navigation() {
     },
   ];
 
-  if (!session) return null;
-
   return (
     <div className="user-info">
         <Dropdown
@@ -80,11 +68,8 @@ export default function Navigation() {
         >
           <div className="user-avatar-container">
             <Avatar size="small" icon={<UserOutlined />} />
-            <span className="user-name">{session.user.name}</span>
-            {session.user.role === "admin" && (
-              <span className="admin-badge">管理员</span>
-            )}
-          </div>
+            <span className="user-name">{me.full_name || me.username}</span>
+                      </div>
         </Dropdown>
       </div>
   );

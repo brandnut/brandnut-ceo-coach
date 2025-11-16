@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button, Drawer } from "antd";
 import { MenuOutlined } from "@ant-design/icons";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useApp } from "@/contexts/AppContext";
 import { appInfo } from "@/config/app";
 
 interface MenuBarProps {
@@ -21,6 +22,21 @@ export default function MenuBar({
 }: MenuBarProps) {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const { organizations } = useApp();
+
+  // Get organization name from organizations data
+  const getOrgName = () => {
+    if (organizations && organizations.length > 0) {
+      return organizations[0].name;
+    }
+    return "";
+  };
+
+  // Dynamic app name as computed property
+  const getDynamicAppName = () => {
+    const orgName = getOrgName();
+    return orgName ? `${orgName} - ${appInfo.name}` : appInfo.name;
+  };
 
   const handleMenuClick = () => {
     if (isMobile) {
@@ -52,18 +68,18 @@ export default function MenuBar({
                     {currentConvName}
                   </h1>
                   <span className="text-sm text-gray-600">
-                    {appInfo.name}
+                    {getDynamicAppName()}
                   </span>
                 </>
               ) : (
                 <h1 className="text-lg font-semibold text-gray-900">
-                  {appInfo.name}
+                  {getDynamicAppName()}
                 </h1>
               )}
             </div>
           ) : (
             <h1 className="text-lg font-semibold text-gray-900">
-              {appInfo.name}
+              {getDynamicAppName()}
             </h1>
           )}
         </div>
