@@ -104,20 +104,34 @@ export async function getUserOrganizations(userId: string): Promise<UserOrganiza
 // 获取用户聊天配置
 export async function getUserChatConfig(userId: string, organizationId?: string): Promise<UserChatConfig | null> {
   return withClient(async (client) => {
+    // 首先获取用户所属的组织
+    const orgQuery = `
+      SELECT organization_id
+      FROM user_organizations
+      WHERE user_id = $1
+    `
+    const orgResult = await client.query(orgQuery, [userId])
+
+    if (orgResult.rows.length === 0) {
+      return null
+    }
+
+    const userOrgIds = orgResult.rows.map(row => row.organization_id)
+
     let query = `
       SELECT
         id,
-        user_id,
         organization_id,
-        dify_api_key,
-        dify_api_url,
+        chat_api_key,
+        chat_api_url,
+        is_active,
         created_at,
         updated_at
-      FROM user_chat_configs
-      WHERE user_id = $1
+      FROM organization_chat_configs
+      WHERE organization_id = ANY($1) AND is_active = true
     `
 
-    const params = [userId]
+    const params = [userOrgIds]
 
     if (organizationId) {
       query += ` AND organization_id = $2`
@@ -145,10 +159,11 @@ export async function getOrganizationChatConfig(organizationId: string): Promise
         organization_id,
         chat_api_url,
         chat_api_key,
+        is_active,
         created_at,
         updated_at
       FROM organization_chat_configs
-      WHERE organization_id = $1
+      WHERE organization_id = $1 AND is_active = true
       ORDER BY updated_at DESC
       LIMIT 1
     `
@@ -195,7 +210,7 @@ export async function createUserChatConfig(
 ): Promise<UserChatConfig> {
   return withClient(async (client) => {
     const query = `
-      INSERT INTO user_chat_configs (
+      INSERT INTO organization_chat_configs (
         user_id,
         organization_id,
         dify_api_key,

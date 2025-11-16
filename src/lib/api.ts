@@ -19,6 +19,23 @@ export interface ConversationsResponse {
   limit: number
 }
 
+// Helper function to get auth headers
+function getAuthHeaders(): Record<string, string> {
+  const storedTokens = localStorage.getItem('auth_tokens')
+  const headers: Record<string, string> = {}
+
+  if (storedTokens) {
+    try {
+      const { access_token } = JSON.parse(storedTokens)
+      headers['Authorization'] = `Bearer ${access_token}`
+    } catch (error) {
+      console.error('Error parsing tokens:', error)
+    }
+  }
+
+  return headers
+}
+
 export async function uploadFile(
   file: File,
   onProgress: (percent: number) => void
@@ -70,7 +87,10 @@ export async function sendMessage(
   try {
     const response = await fetch('/api/chat/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
       body: JSON.stringify({
         query,
         conversation_id: conversationId || undefined,
@@ -147,7 +167,9 @@ export async function getConversations(
       params.append('last_id', lastId)
     }
 
-    const response = await fetch(`/api/conversations?${params}`)
+    const response = await fetch(`/api/conversations?${params}`, {
+      headers: getAuthHeaders()
+    })
 
     if (!response.ok) {
       return { conversations: [], hasMore: false, limit: 20 }
@@ -172,6 +194,7 @@ export async function deleteConversation(conversationId: string): Promise<boolea
   try {
     const response = await fetch(`/api/conversations/${conversationId}`, {
       method: 'DELETE',
+      headers: getAuthHeaders(),
     })
 
     return response.ok
@@ -183,7 +206,8 @@ export async function deleteConversation(conversationId: string): Promise<boolea
 export async function getMessages(conversationId: string): Promise<Message[]> {
   try {
     const response = await fetch(
-      `/api/conversations/${conversationId}/messages`
+      `/api/conversations/${conversationId}/messages`,
+      { headers: getAuthHeaders() }
     )
 
     if (!response.ok) return []

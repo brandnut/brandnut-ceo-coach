@@ -1,20 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserFromRequest } from '@/lib/auth'
+import { getCurrentUser } from '@/lib/auth-middleware'
 import { getUserChatConfig } from '@/lib/db/queries'
 
 export async function GET(req: NextRequest) {
-  const session = {
-    user: await getCurrentUserFromRequest(req)
-  }
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authResult = await getCurrentUser(req as any)
+  if (!authResult.user) {
+    if (authResult.error === 'TOKEN_EXPIRED') {
+      return NextResponse.json({ error: 'Access token expired' }, { status: 401 })
+    } else if (authResult.error === 'ACCOUNT_INACTIVE') {
+      return NextResponse.json({ error: 'Account inactive' }, { status: 403 })
+    } else {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
   }
 
   try {
     // 获取用户的组织聊天配置
     let chatConfig = null
     try {
-      chatConfig = await getUserChatConfig(session.user.id)
+      chatConfig = await getUserChatConfig(authResult.user.id)
     } catch (error) {
       console.error('Failed to get user chat config:', error)
     }
@@ -32,7 +36,7 @@ export async function GET(req: NextRequest) {
     const limit = searchParams.get('limit') || '20'
 
     const params = new URLSearchParams({
-      user: session.user.name,
+      user: authResult.user.id,
       limit,
     })
     if (lastId) {

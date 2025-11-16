@@ -13,6 +13,7 @@ import {
 } from "@ant-design/icons";
 import TutorialModal from "@/components/TutorialModal";
 import Navigation from "@/components/layout/Navigation";
+import { sendMessage } from "@/lib/api";
 import MenuBar from "@/components/layout/MenuBar";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import type { UploadFile } from "antd";
@@ -287,9 +288,22 @@ export default function ChatPage() {
     const userName = guestMode.enabled ? guestMode.username : user?.username;
     if (currentTaskIdRef.current && userName) {
       try {
+        // Get auth headers
+        const storedTokens = localStorage.getItem('auth_tokens');
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+
+        if (storedTokens) {
+          try {
+            const { access_token } = JSON.parse(storedTokens);
+            headers['Authorization'] = `Bearer ${access_token}`;
+          } catch (error) {
+            console.error('Error parsing tokens:', error);
+          }
+        }
+
         await fetch("/api/chat/stop", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({
             taskId: currentTaskIdRef.current,
           }),
@@ -466,9 +480,22 @@ export default function ChatPage() {
     abortControllerRef.current = new AbortController();
 
     try {
+      // Get auth headers
+      const storedTokens = localStorage.getItem('auth_tokens');
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+
+      if (storedTokens) {
+        try {
+          const { access_token } = JSON.parse(storedTokens);
+          headers['Authorization'] = `Bearer ${access_token}`;
+        } catch (error) {
+          console.error('Error parsing tokens:', error);
+        }
+      }
+
       const response = await fetch("/api/chat/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           query: userMessage,
           conversationId: currentConvId,

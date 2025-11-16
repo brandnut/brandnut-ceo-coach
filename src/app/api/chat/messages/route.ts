@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         inputs,
         query,
-        user: authResult.user.username,
+        user: authResult.user.id,
         conversation_id: conversationId,
         files,
         response_mode: 'streaming',
