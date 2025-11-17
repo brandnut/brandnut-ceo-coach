@@ -1,15 +1,13 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  app:
-    image: ghcr.io/keithhchen/ceibs-knowledge-chat:main
+  ceo:
+    image: ghcr.io/keithhchen/brandnut-ceo-coach:saas
     ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
+      - "3005:3000"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3005/ceo/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
