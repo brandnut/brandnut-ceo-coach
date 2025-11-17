@@ -1,6 +1,7 @@
 import { Card, Typography, Button, Steps } from "antd";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import { useApp } from "@/contexts/AppContext";
+import { brandnutStyles } from "@/lib/styles";
 
 const { Title, Paragraph } = Typography;
 
@@ -21,7 +22,7 @@ export default function FeatureUnavailable({
         alignItems: "center",
         minHeight: "100vh",
         padding: "20px",
-        backgroundColor: "#f5f5f5",
+        background: brandnutStyles.background.gradient,
       }}
     >
       <Card style={{ maxWidth: "400px", textAlign: "center" }}>
@@ -44,12 +45,14 @@ export default function FeatureUnavailable({
         </Paragraph>
 
         {/* Service Steps */}
-        <div style={{
-          backgroundColor: "#fafafa",
-          borderRadius: "8px",
-          padding: "16px",
-          marginBottom: "16px"
-        }}>
+        <div
+          style={{
+            backgroundColor: "#fafafa",
+            borderRadius: "8px",
+            padding: "16px",
+            marginBottom: "16px",
+          }}
+        >
           <style>{`
             .ant-steps-item-wait .ant-steps-item-title {
               color: #333 !important;
@@ -60,17 +63,17 @@ export default function FeatureUnavailable({
             size="small"
             items={[
               {
-                title: "深度访谈",
-                status: "wait"
+                title: "接受深度访谈",
+                status: "wait",
               },
               {
                 title: "获得战略诊断报告",
-                status: "wait"
+                status: "wait",
               },
               {
-                title: "AI CEO 教练开通",
-                status: "wait"
-              }
+                title: "获得 CEO 教练",
+                status: "wait",
+              },
             ]}
           />
         </div>
@@ -83,7 +86,7 @@ export default function FeatureUnavailable({
           target="_blank"
           style={{ width: "100%", marginBottom: "12px" }}
         >
-          申请开通
+          申请深度访谈
         </Button>
 
         {/* Logout Button */}

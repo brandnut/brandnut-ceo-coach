@@ -6,6 +6,7 @@ import { Form, Input, Button, Alert, Typography, Card, Space } from "antd";
 import { PhoneOutlined, LockOutlined } from "@ant-design/icons";
 import { appInfo } from "@/config/app";
 import { useApp } from "@/contexts/AppContext";
+import { brandnutStyles } from "@/lib/styles";
 
 const { Title } = Typography;
 
@@ -117,7 +118,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(180deg, #f5271f14, #f5271f05)' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: brandnutStyles.background.gradient }}>
       <div className="w-full max-w-md">
         {/* Logo 区域 */}
         <div className="text-center mb-8">
