@@ -13,6 +13,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: saas
     permissions:
       contents: read
       packages: write
@@ -53,8 +54,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            DIFY_API_URL=${{ vars.DIFY_API_URL }}
+            DATABASE_URL=${{ vars.DATABASE_URL }}
             DIFY_API_KEY=${{ vars.DIFY_API_KEY }}
+            DIFY_API_URL=${{ vars.DIFY_API_URL }}
+            GUEST_MODE_ENABLED=${{ vars.GUEST_MODE_ENABLED }}
             NEXTAUTH_SECRET=${{ vars.NEXTAUTH_SECRET }}
             NEXTAUTH_URL=${{ vars.NEXTAUTH_URL }}
-            DATABASE_URL=${{ vars.DATABASE_URL }}
+            NEXT_PUBLIC_BASE_PATH=${{ vars.NEXT_PUBLIC_BASE_PATH }}
+            REDIS_URL=${{ vars.REDIS_URL }}
+            SECRET_KEY=${{ vars.SECRET_KEY }}

@@ -2,12 +2,12 @@ version: "3.8"
 
 services:
   ceo:
-    image: ghcr.io/keithhchen/brandnut-ceo-coach:saas
+    image: ghcr.io/brandnut/brandnut-ceo-coach:saas
     ports:
       - "3005:3000"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3005/ceo/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/ceo/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
