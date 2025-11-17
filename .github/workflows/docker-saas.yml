@@ -54,7 +54,14 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
+            # Sensitive data from secrets
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            DIFY_API_KEY=${{ secrets.DIFY_API_KEY }}
+            REDIS_URL=${{ secrets.REDIS_URL }}
+            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+            # Configuration data from vars
             DIFY_API_URL=${{ vars.DIFY_API_URL }}
+            GUEST_MODE_ENABLED=${{ vars.GUEST_MODE_ENABLED }}
             NEXTAUTH_URL=${{ vars.NEXTAUTH_URL }}
             NEXT_PUBLIC_BASE_PATH=${{ vars.NEXT_PUBLIC_BASE_PATH }}
-            GUEST_MODE_ENABLED=${{ vars.GUEST_MODE_ENABLED }}

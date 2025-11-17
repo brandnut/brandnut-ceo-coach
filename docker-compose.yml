@@ -7,17 +7,16 @@ services:
       - "3005:3000"
     restart: unless-stopped
     environment:
-      # Runtime secrets (set these in your environment or use .env file)
-      - DATABASE_URL=${DATABASE_URL}
-      - DIFY_API_KEY=${DIFY_API_KEY}
-      - REDIS_URL=${REDIS_URL}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - SECRET_KEY=${SECRET_KEY}
-      # Build-time variables (already embedded in image)
+      # All environment variables are embedded in the image during build
+      - DATABASE_URL
+      - DIFY_API_KEY
       - DIFY_API_URL
+      - GUEST_MODE_ENABLED
+      - NEXTAUTH_SECRET
       - NEXTAUTH_URL
       - NEXT_PUBLIC_BASE_PATH
-      - GUEST_MODE_ENABLED
+      - REDIS_URL
+      - SECRET_KEY
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/ceo/api/health"]
       interval: 30s
