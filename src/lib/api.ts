@@ -1,4 +1,5 @@
 import { VisionFile } from '@/types'
+import { storage, storageKeys } from '@/lib/storage'
 
 export interface Message {
   id: string
@@ -21,7 +22,7 @@ export interface ConversationsResponse {
 
 // Helper function to get auth headers
 function getAuthHeaders(): Record<string, string> {
-  const storedTokens = localStorage.getItem('auth_tokens')
+  const storedTokens = storage.getItem(storageKeys.AUTH_TOKENS)
   const headers: Record<string, string> = {}
 
   if (storedTokens) {

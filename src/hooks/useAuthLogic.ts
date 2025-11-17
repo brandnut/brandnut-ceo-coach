@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { Organization } from '@/contexts/AppContext'
+import { storage, storageKeys } from '@/lib/storage'
 
 interface AuthTokens {
   access_token: string
@@ -99,7 +100,7 @@ export function useAuthLogic() {
   // Logout
   const logout = useCallback(async () => {
     try {
-      const tokens = localStorage.getItem('auth_tokens')
+      const tokens = storage.getItem(storageKeys.AUTH_TOKENS)
       if (tokens) {
         const { refresh_token } = JSON.parse(tokens)
         await fetch('/api/auth/logout', {
@@ -114,7 +115,7 @@ export function useAuthLogic() {
       console.error('Logout API call failed:', error)
     } finally {
       // Clear auth state - only auth_tokens stored in localStorage
-      localStorage.removeItem('auth_tokens')
+      storage.removeItem(storageKeys.AUTH_TOKENS)
       setMe(null)
       setOrganizations([])
       setTokens(null)
@@ -144,8 +145,8 @@ export function useAuthLogic() {
         refresh_token: data.refresh_token,
       }
 
-      localStorage.setItem('auth_tokens', JSON.stringify(tokens))
-      localStorage.setItem('tutorial-shown', 'false')
+      storage.setItem(storageKeys.AUTH_TOKENS, JSON.stringify(tokens))
+      storage.setItem(storageKeys.TUTORIAL_SHOWN, 'false')
 
       await updateAuthState(tokens)
 
@@ -183,7 +184,7 @@ export function useAuthLogic() {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const storedTokens = localStorage.getItem('auth_tokens')
+        const storedTokens = storage.getItem(storageKeys.AUTH_TOKENS)
         if (!storedTokens) {
           setIsLoading(false)
           return
@@ -213,7 +214,7 @@ export function useAuthLogic() {
                 refresh_token: data.refresh_token || parsedTokens.refresh_token,
               }
 
-              localStorage.setItem('auth_tokens', JSON.stringify(newTokens))
+              storage.setItem(storageKeys.AUTH_TOKENS, JSON.stringify(newTokens))
 
               const { user, orgs } = await fetchUserData(newTokens.access_token)
               setMe(user)
@@ -224,7 +225,7 @@ export function useAuthLogic() {
               throw new Error('Token refresh failed')
             }
           } catch (refreshError) {
-            localStorage.removeItem('auth_tokens')
+            storage.removeItem(storageKeys.AUTH_TOKENS)
             setMe(null)
             setOrganizations([])
             setTokens(null)

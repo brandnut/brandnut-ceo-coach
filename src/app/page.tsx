@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useApp } from "@/contexts/AppContext";
+import { storage, storageKeys } from "@/lib/storage";
 import { Sender, Attachments, Conversations } from "@ant-design/x";
 import { Popover, Upload } from "antd";
 import {
@@ -148,10 +149,10 @@ export default function ChatPage() {
         loadConversations();
 
         // Check if tutorial should be shown
-        const tutorialShown = localStorage.getItem("tutorial-shown");
+        const tutorialShown = storage.getItem(storageKeys.TUTORIAL_SHOWN);
         if (tutorialShown !== "true") {
           setIsHelpOpen(true);
-          localStorage.setItem("tutorial-shown", "true");
+          storage.setItem(storageKeys.TUTORIAL_SHOWN, "true");
         }
       }
     }
@@ -250,7 +251,7 @@ export default function ChatPage() {
 
     try {
       // Get auth headers
-      const storedTokens = localStorage.getItem("auth_tokens");
+      const storedTokens = storage.getItem(storageKeys.AUTH_TOKENS);
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
@@ -319,7 +320,7 @@ export default function ChatPage() {
     if (currentTaskIdRef.current && userName) {
       try {
         // Get auth headers
-        const storedTokens = localStorage.getItem("auth_tokens");
+        const storedTokens = storage.getItem(storageKeys.AUTH_TOKENS);
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
         };
@@ -513,7 +514,7 @@ export default function ChatPage() {
 
     try {
       // Get auth headers
-      const storedTokens = localStorage.getItem("auth_tokens");
+      const storedTokens = storage.getItem(storageKeys.AUTH_TOKENS);
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
