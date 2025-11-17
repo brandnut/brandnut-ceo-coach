@@ -14,7 +14,7 @@ import {
 import TutorialModal from "@/components/TutorialModal";
 import Navigation from "@/components/layout/Navigation";
 import { sendMessage } from "@/lib/api";
-import MenuBar from "@/components/layout/MenuBar";
+import MenuBar, { type MenuBarRef } from "@/components/layout/MenuBar";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import FeatureUnavailable from "@/components/FeatureUnavailable";
 import type { UploadFile } from "antd";
@@ -107,9 +107,11 @@ export default function ChatPage() {
   const { me, isLoading, logout, organizations } = useApp();
   const isAuthenticated = !!me;
   const router = useRouter();
+  const menuBarRef = useRef<MenuBarRef>(null);
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   // 从组织列表中获取聊天配置
-  const chatConfig = organizations?.find(org => org.chatConfig)?.chatConfig;
+  const chatConfig = organizations?.find((org) => org.chatConfig)?.chatConfig;
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConvId, setCurrentConvId] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -127,7 +129,6 @@ export default function ChatPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const isMobile = useMediaQuery("(max-width: 768px)");
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const senderRef = useRef<any>(null);
@@ -220,10 +221,17 @@ export default function ChatPage() {
     }
   };
 
+  const closeMobileSidebarIfNeeded = () => {
+    if (isMobile && menuBarRef.current) {
+      menuBarRef.current.closeMobileSidebar();
+    }
+  };
+
   const startNewConversation = () => {
     setCurrentConvId(null);
     setMessages([]);
     setInput("");
+    closeMobileSidebarIfNeeded();
   };
 
   const getCurrentConversationName = () => {
@@ -238,9 +246,27 @@ export default function ChatPage() {
     setAttachments([]);
     setMessages([]);
     setIsLoadingConversation(true);
+    closeMobileSidebarIfNeeded();
 
     try {
-      const response = await fetch(`/api/conversations/${convId}/messages`);
+      // Get auth headers
+      const storedTokens = localStorage.getItem("auth_tokens");
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (storedTokens) {
+        try {
+          const { access_token } = JSON.parse(storedTokens);
+          headers["Authorization"] = `Bearer ${access_token}`;
+        } catch (error) {
+          console.error("Error parsing tokens:", error);
+        }
+      }
+
+      const response = await fetch(`/api/conversations/${convId}/messages`, {
+        headers,
+      });
       if (!response.ok) {
         setMessages([]);
         return;
@@ -293,15 +319,17 @@ export default function ChatPage() {
     if (currentTaskIdRef.current && userName) {
       try {
         // Get auth headers
-        const storedTokens = localStorage.getItem('auth_tokens');
-        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        const storedTokens = localStorage.getItem("auth_tokens");
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
 
         if (storedTokens) {
           try {
             const { access_token } = JSON.parse(storedTokens);
-            headers['Authorization'] = `Bearer ${access_token}`;
+            headers["Authorization"] = `Bearer ${access_token}`;
           } catch (error) {
-            console.error('Error parsing tokens:', error);
+            console.error("Error parsing tokens:", error);
           }
         }
 
@@ -485,15 +513,17 @@ export default function ChatPage() {
 
     try {
       // Get auth headers
-      const storedTokens = localStorage.getItem('auth_tokens');
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const storedTokens = localStorage.getItem("auth_tokens");
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
 
       if (storedTokens) {
         try {
           const { access_token } = JSON.parse(storedTokens);
-          headers['Authorization'] = `Bearer ${access_token}`;
+          headers["Authorization"] = `Bearer ${access_token}`;
         } catch (error) {
-          console.error('Error parsing tokens:', error);
+          console.error("Error parsing tokens:", error);
         }
       }
 
@@ -564,6 +594,7 @@ export default function ChatPage() {
               if (data.conversation_id) {
                 setCurrentConvId(data.conversation_id);
                 loadConversations();
+                closeMobileSidebarIfNeeded();
               }
             } else if (data.event === "workflow_started") {
               setWorkflowStatus("正在思考");
@@ -617,7 +648,10 @@ export default function ChatPage() {
   if (isLoading && !guestMode.enabled) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        正在载入...
+        <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+          <span className="spinner-large"></span>
+          <span className="text-base font-medium">品核 AI 正在载入...</span>
+        </div>
       </div>
     );
   }
@@ -627,7 +661,6 @@ export default function ChatPage() {
     return null;
   }
 
-  
   const SidebarContent = () => (
     <>
       <div className="sidebar-header">
@@ -682,10 +715,11 @@ export default function ChatPage() {
           <button
             type="button"
             onClick={() => setIsHelpOpen(true)}
-            className="p-2 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+            className="p-2 rounded-full text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
             aria-label="使用教程"
           >
             <QuestionCircleOutlined />
+            <span className="text-sm">使用教程</span>
           </button>
         </div>
       </div>
@@ -696,277 +730,293 @@ export default function ChatPage() {
     <ProtectedRoute>
       {chatConfig ? (
         <div className="chat-container">
-        <Suspense fallback={null}>
-          <InstanceHandler
-            onInstanceLoaded={setInstanceTitle}
-            onInstanceDataLoaded={setInstanceData}
-            onLoadingChange={setIsLoadingInstance}
-          />
-        </Suspense>
-        {/* Desktop sidebar - hidden on mobile */}
-        {!isMobile && (
-          <div className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>
-            <SidebarContent />
-          </div>
-        )}
+          <Suspense fallback={null}>
+            <InstanceHandler
+              onInstanceLoaded={setInstanceTitle}
+              onInstanceDataLoaded={setInstanceData}
+              onLoadingChange={setIsLoadingInstance}
+            />
+          </Suspense>
+          {/* Desktop sidebar - hidden on mobile */}
+          {!isMobile && (
+            <div className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>
+              <SidebarContent />
+            </div>
+          )}
 
-        <div className="main overflow-x-hidden">
-          <MenuBar
-            onSidebarToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-            sidebarCollapsed={sidebarCollapsed}
-            currentConvName={getCurrentConversationName()}
-          >
-            <SidebarContent />
-          </MenuBar>
-          <div className="messages" ref={messagesContainerRef}>
-            {isLoadingConversation ? (
-              <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
-                <span className="spinner-large"></span>
-                <span className="text-base font-medium">加载对话中...</span>
-              </div>
-            ) : messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full gap-6 text-muted-foreground">
-                <span className="text-4xl">{welcomeText.greeting}</span>
-                <span className="text-base font-medium">
-                  {welcomeText.startNewConversation}
-                </span>
-                {(instanceTitle || isLoadingInstance) && (
-                  <span className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full flex items-center gap-2">
-                    {isLoadingInstance ? (
-                      <>
-                        <LoadingOutlined className="animate-spin" />
-                        正在加载任务模板
-                      </>
-                    ) : (
-                      <Popover
-                        content={
-                          <div className="max-w-xs">
-                            <p className="text-sm text-gray-700">
-                              {instanceData?.description || "暂无描述"}
-                            </p>
-                            {instanceData?.tags && (
-                              <div className="mt-2 flex flex-wrap gap-1">
-                                {instanceData.tags.map(
-                                  (tag: string, index: number) => (
-                                    <span
-                                      key={index}
-                                      className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded"
-                                    >
-                                      {tag}
-                                    </span>
-                                  )
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        }
-                        trigger="hover"
-                        placement="bottom"
-                      >
-                        <span className="cursor-help hover:bg-gray-200 transition-colors px-1 rounded">
-                          {instanceTitle}
-                        </span>
-                      </Popover>
-                    )}
-                  </span>
-                )}
-                {welcomeQuestions.length > 0 && (
-                  <div className="flex flex-col gap-2 w-full max-w-md">
-                    <p className="text-sm text-center">
-                      {welcomeText.suggestedQuestionsTitle}
-                    </p>
-                    <div className="flex flex-col gap-2 text-sm">
-                      {welcomeQuestions.map((question, index) => (
-                        <div
-                          key={index}
-                          className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors"
-                          onClick={() => setInput(question)}
-                        >
-                          {question}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <div className="flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => setIsHelpOpen(true)}
-                    className="mt-2 px-3 py-1 text-sm text-primary hover:opacity-80 transition-colors flex items-center gap-2"
-                  >
-                    了解更多
-                  </button>
+          <div className="main overflow-x-hidden">
+            <MenuBar
+              ref={menuBarRef}
+              onSidebarToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+              sidebarCollapsed={sidebarCollapsed}
+              currentConvName={getCurrentConversationName()}
+            >
+              <SidebarContent />
+            </MenuBar>
+            <div className="messages cursor-select" ref={messagesContainerRef}>
+              {isLoadingConversation ? (
+                <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
+                  <span className="spinner-large"></span>
+                  <span className="text-base font-medium">加载对话中...</span>
                 </div>
-              </div>
-            ) : (
-              <>
-                {messages.map((msg, index) => {
-                  const isLastMessage = index === messages.length - 1;
-                  const showLoading =
-                    msg.role === "assistant" && isStreaming && isLastMessage;
-
-                  return (
-                    <div key={msg.id} className={`message ${msg.role}`}>
-                      <div className="message-content">
-                        {msg.message_files && msg.message_files.length > 0 && (
-                          <div style={{ marginBottom: "8px" }}>
-                            {msg.message_files.map((file) => (
-                              <Attachments.FileCard
-                                key={file.id}
-                                item={{
-                                  uid: file.id,
-                                  name: file.filename,
-                                  size: file.size,
-                                  type: file.mime_type,
-                                  status: "done",
-                                }}
-                                style={{
-                                  backgroundColor: "hsl(var(--muted) / 0.5)",
-                                  border: "1px solid hsl(var(--border))",
-                                }}
-                              />
-                            ))}
+              ) : messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full gap-6 text-muted-foreground">
+                  <span className="text-4xl">{welcomeText.greeting}</span>
+                  <span className="text-base font-medium">
+                    {welcomeText.startNewConversation}
+                  </span>
+                  {(instanceTitle || isLoadingInstance) && (
+                    <span className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full flex items-center gap-2">
+                      {isLoadingInstance ? (
+                        <>
+                          <LoadingOutlined className="animate-spin" />
+                          正在加载任务模板
+                        </>
+                      ) : (
+                        <Popover
+                          content={
+                            <div className="max-w-xs">
+                              <p className="text-sm text-gray-700">
+                                {instanceData?.description || "暂无描述"}
+                              </p>
+                              {instanceData?.tags && (
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                  {instanceData.tags.map(
+                                    (tag: string, index: number) => (
+                                      <span
+                                        key={index}
+                                        className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded"
+                                      >
+                                        {tag}
+                                      </span>
+                                    )
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          }
+                          trigger="hover"
+                          placement="bottom"
+                        >
+                          <span className="cursor-help hover:bg-gray-200 transition-colors px-1 rounded">
+                            {instanceTitle}
+                          </span>
+                        </Popover>
+                      )}
+                    </span>
+                  )}
+                  {welcomeQuestions.length > 0 && (
+                    <div className="flex flex-col gap-2 w-full max-w-md">
+                      <p className="text-sm text-center">
+                        {welcomeText.suggestedQuestionsTitle}
+                      </p>
+                      <div className="flex flex-col gap-2 text-sm">
+                        {welcomeQuestions.map((question, index) => (
+                          <div
+                            key={index}
+                            className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors"
+                            onClick={() => setInput(question)}
+                          >
+                            {question}
                           </div>
-                        )}
-
-                        {showLoading && workflowStatus && (
-                          <div className="message-loading">
-                            <span className="spinner"></span>
-                            <span className="loading-text">
-                              {workflowStatus}
-                            </span>
-                          </div>
-                        )}
-
-                        <div className="markdown-body">
-                          <CustomStreamdown>{msg.content}</CustomStreamdown>
-                        </div>
+                        ))}
                       </div>
                     </div>
-                  );
-                })}
-                <div ref={messagesEndRef} />
-              </>
-            )}
-          </div>
+                  )}
+                  <div className="flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setIsHelpOpen(true)}
+                      className="mt-2 px-3 py-1 text-sm text-primary hover:opacity-80 transition-colors flex items-center gap-2"
+                    >
+                      查看使用教程
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {messages.map((msg, index) => {
+                    const isLastMessage = index === messages.length - 1;
+                    const showLoading =
+                      msg.role === "assistant" && isStreaming && isLastMessage;
 
-          <div className="input-container">
-            <Sender
-              ref={senderRef}
-              value={input}
-              onChange={setInput}
-              onSubmit={handleSend}
-              onCancel={handleStop}
-              loading={isStreaming}
-              placeholder="开始提问..."
-              autoSize={{ minRows: 1, maxRows: 5 }}
-              rootClassName="overflow-x-hidden"
-              header={
-                attachments.length > 0 && (
-                  <Sender.Header title="附件" open={true}>
-                    <Attachments
-                      items={attachments as any}
-                      onChange={({ fileList }) => {
-                        setAttachments(fileList as AttachmentFile[]);
-                      }}
-                      onRemove={(item) => {
-                        if (item.url?.startsWith("blob:")) {
-                          URL.revokeObjectURL(item.url);
-                        }
-                      }}
-                      beforeUpload={() => false}
-                      overflow="wrap"
-                      styles={{
-                        list: {
-                          display: "flex",
-                          flexDirection: "row",
-                          flexWrap: "wrap",
-                          gap: "8px",
-                          padding: "8px 0",
-                        },
-                        item: {
-                          background: "hsl(var(--muted))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "6px",
-                          padding: "6px 10px",
-                        },
-                      }}
-                    />
-                  </Sender.Header>
-                )
-              }
-              actions={(ori, { components }) => (
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "4px" }}
-                >
-                  <Upload
-                    multiple
-                    showUploadList={false}
-                    accept=".pdf,.txt,.doc,.docx,.md,.csv,.xlsx,.xls,.pptx,.ppt"
-                    disabled={isStreaming}
-                    maxCount={10}
-                    beforeUpload={(file) => {
-                      // Start upload
-                      const uid =
-                        file.uid ||
-                        `${Date.now()}-${Math.random()
-                          .toString(36)
-                          .substr(2, 9)}`;
-                      const newAttachment: AttachmentFile = {
-                        uid,
-                        name: file.name,
-                        size: file.size,
-                        type: file.type,
-                        status: "uploading",
-                        percent: 0,
-                        originFileObj: file,
-                      };
+                    return (
+                      <div key={msg.id} className={`message ${msg.role}`}>
+                        <div className="message-content">
+                          {msg.message_files &&
+                            msg.message_files.length > 0 && (
+                              <div style={{ marginBottom: "8px" }}>
+                                {msg.message_files.map((file) => (
+                                  <Attachments.FileCard
+                                    key={file.id}
+                                    item={{
+                                      uid: file.id,
+                                      name: file.filename,
+                                      size: file.size,
+                                      type: file.mime_type,
+                                      status: "done",
+                                    }}
+                                    style={{
+                                      backgroundColor:
+                                        "hsl(var(--muted) / 0.5)",
+                                      border: "1px solid hsl(var(--border))",
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                            )}
 
-                      setAttachments((prev) => [...prev, newAttachment]);
+                          {showLoading && workflowStatus && (
+                            <div className="message-loading">
+                              <span className="spinner"></span>
+                              <span className="loading-text">
+                                {workflowStatus}
+                              </span>
+                            </div>
+                          )}
 
-                      // Upload file to server
-                      const formData = new FormData();
-                      formData.append("file", file);
+                          <div className="markdown-body">
+                            <CustomStreamdown>{msg.content}</CustomStreamdown>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div ref={messagesEndRef} />
+                </>
+              )}
+            </div>
 
-                      const xhr = new XMLHttpRequest();
+            <div className="input-container">
+              <Sender
+                ref={senderRef}
+                value={input}
+                onChange={setInput}
+                onSubmit={handleSend}
+                onCancel={handleStop}
+                loading={isStreaming}
+                placeholder="开始提问..."
+                autoSize={{ minRows: 1, maxRows: 5 }}
+                rootClassName="overflow-x-hidden"
+                header={
+                  attachments.length > 0 && (
+                    <Sender.Header title="附件" open={true}>
+                      <Attachments
+                        items={attachments as any}
+                        onChange={({ fileList }) => {
+                          setAttachments(fileList as AttachmentFile[]);
+                        }}
+                        onRemove={(item) => {
+                          if (item.url?.startsWith("blob:")) {
+                            URL.revokeObjectURL(item.url);
+                          }
+                        }}
+                        beforeUpload={() => false}
+                        overflow="wrap"
+                        styles={{
+                          list: {
+                            display: "flex",
+                            flexDirection: "row",
+                            flexWrap: "wrap",
+                            gap: "8px",
+                            padding: "8px 0",
+                          },
+                          item: {
+                            background: "hsl(var(--muted))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "6px",
+                            padding: "6px 10px",
+                          },
+                        }}
+                      />
+                    </Sender.Header>
+                  )
+                }
+                actions={(ori, { components }) => (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    <Upload
+                      multiple
+                      showUploadList={false}
+                      accept=".pdf,.txt,.doc,.docx,.md,.csv,.xlsx,.xls,.pptx,.ppt"
+                      disabled={isStreaming}
+                      maxCount={10}
+                      beforeUpload={(file) => {
+                        // Start upload
+                        const uid =
+                          file.uid ||
+                          `${Date.now()}-${Math.random()
+                            .toString(36)
+                            .substr(2, 9)}`;
+                        const newAttachment: AttachmentFile = {
+                          uid,
+                          name: file.name,
+                          size: file.size,
+                          type: file.type,
+                          status: "uploading",
+                          percent: 0,
+                          originFileObj: file,
+                        };
 
-                      // Upload progress
-                      xhr.upload.onprogress = (e: ProgressEvent) => {
-                        if (e.lengthComputable) {
-                          const percent = Math.floor(
-                            (e.loaded / e.total) * 100
-                          );
-                          setAttachments((prev) =>
-                            prev.map((f) =>
-                              f.uid === uid ? { ...f, percent } : f
-                            )
-                          );
-                        }
-                      };
+                        setAttachments((prev) => [...prev, newAttachment]);
 
-                      // Upload complete
-                      xhr.onreadystatechange = () => {
-                        if (xhr.readyState === 4) {
-                          if (xhr.status === 200) {
-                            try {
-                              const response = JSON.parse(xhr.responseText);
-                              setAttachments((prev) =>
-                                prev.map((f) =>
-                                  f.uid === uid
-                                    ? {
-                                        ...f,
-                                        status: "done" as const,
-                                        percent: 100,
-                                        uploadedId: response.id,
-                                        url:
-                                          response.url ||
-                                          URL.createObjectURL(file),
-                                      }
-                                    : f
-                                )
-                              );
-                            } catch (e) {
-                              console.error("Upload response error:", e);
+                        // Upload file to server
+                        const formData = new FormData();
+                        formData.append("file", file);
+
+                        const xhr = new XMLHttpRequest();
+
+                        // Upload progress
+                        xhr.upload.onprogress = (e: ProgressEvent) => {
+                          if (e.lengthComputable) {
+                            const percent = Math.floor(
+                              (e.loaded / e.total) * 100
+                            );
+                            setAttachments((prev) =>
+                              prev.map((f) =>
+                                f.uid === uid ? { ...f, percent } : f
+                              )
+                            );
+                          }
+                        };
+
+                        // Upload complete
+                        xhr.onreadystatechange = () => {
+                          if (xhr.readyState === 4) {
+                            if (xhr.status === 200) {
+                              try {
+                                const response = JSON.parse(xhr.responseText);
+                                setAttachments((prev) =>
+                                  prev.map((f) =>
+                                    f.uid === uid
+                                      ? {
+                                          ...f,
+                                          status: "done" as const,
+                                          percent: 100,
+                                          uploadedId: response.id,
+                                          url:
+                                            response.url ||
+                                            URL.createObjectURL(file),
+                                        }
+                                      : f
+                                  )
+                                );
+                              } catch (e) {
+                                console.error("Upload response error:", e);
+                                setAttachments((prev) =>
+                                  prev.map((f) =>
+                                    f.uid === uid
+                                      ? { ...f, status: "error" as const }
+                                      : f
+                                  )
+                                );
+                              }
+                            } else {
                               setAttachments((prev) =>
                                 prev.map((f) =>
                                   f.uid === uid
@@ -975,106 +1025,100 @@ export default function ChatPage() {
                                 )
                               );
                             }
-                          } else {
-                            setAttachments((prev) =>
-                              prev.map((f) =>
-                                f.uid === uid
-                                  ? { ...f, status: "error" as const }
-                                  : f
-                              )
-                            );
                           }
-                        }
-                      };
+                        };
 
-                      // Error handling
-                      xhr.onerror = () => {
-                        setAttachments((prev) =>
-                          prev.map((f) =>
-                            f.uid === uid
-                              ? { ...f, status: "error" as const }
-                              : f
-                          )
-                        );
-                      };
+                        // Error handling
+                        xhr.onerror = () => {
+                          setAttachments((prev) =>
+                            prev.map((f) =>
+                              f.uid === uid
+                                ? { ...f, status: "error" as const }
+                                : f
+                            )
+                          );
+                        };
 
-                      xhr.open("POST", "/api/files/upload");
-                      xhr.send(formData);
+                        xhr.open("POST", "/api/files/upload");
+                        xhr.send(formData);
 
-                      return false; // Prevent default upload
-                    }}
-                  >
-                    <button
-                      type="button"
-                      disabled={isStreaming}
-                      className="text-muted-foreground transition-all hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                      style={{
-                        border: "none",
-                        background: "transparent",
-                        padding: "8px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        height: "32px",
+                        return false; // Prevent default upload
                       }}
                     >
-                      <PaperClipOutlined style={{ fontSize: "18px" }} />
-                    </button>
-                  </Upload>
-                  {ori}
-                </div>
-              )}
-            />
-            <div className="mt-3 px-1 text-xs text-center text-muted-foreground/60 cursor-pointer select-none">
-              {docCountLabel && docFiles.length > 0 ? (
-                <div>
-                  <span className="inline">基于</span>
-                  <Popover
-                    placement="top"
-                    trigger={["hover", "click"]}
-                    arrow={true}
-                    styles={{
-                      root: {
-                        width: "300px",
-                      },
-                    }}
-                    content={
-                      <div className="max-h-80 overflow-y-auto break-words space-y-3">
-                        {docFiles.map((file, index) => (
-                          <div
-                            key={`${file.name || "file"}-${index}`}
-                            className="text-xs"
-                          >
-                            <div className="text-foreground">
-                              {file.name || "未命名"}
-                            </div>
-                            {typeof file.indexed_page_count === "number" && (
-                              <div className="text-muted-foreground/80">
-                                {file.indexed_page_count} 页
+                      <button
+                        type="button"
+                        disabled={isStreaming}
+                        className="text-muted-foreground transition-all hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          padding: "8px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          height: "32px",
+                        }}
+                      >
+                        <PaperClipOutlined style={{ fontSize: "18px" }} />
+                      </button>
+                    </Upload>
+                    {ori}
+                  </div>
+                )}
+              />
+              <div className="mt-3 px-1 text-xs text-center text-muted-foreground/60 cursor-pointer select-none">
+                {docCountLabel && docFiles.length > 0 ? (
+                  <div>
+                    <span className="inline">基于</span>
+                    <Popover
+                      placement="top"
+                      trigger={["hover", "click"]}
+                      arrow={true}
+                      styles={{
+                        root: {
+                          width: "300px",
+                        },
+                      }}
+                      content={
+                        <div className="max-h-80 overflow-y-auto break-words space-y-3">
+                          {docFiles.map((file, index) => (
+                            <div
+                              key={`${file.name || "file"}-${index}`}
+                              className="text-xs"
+                            >
+                              <div className="text-foreground">
+                                {file.name || "未命名"}
                               </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    }
-                  >
-                    <span className="text-muted-foreground/60 hover:text-muted-foreground">
-                      {" "}
-                      {docCountLabel} 个知识库文档
-                    </span>
-                  </Popover>
-                  <span className="inline">和互联网搜索，内容由 AI 生成</span>
-                </div>
-              ) : (
-                <span className="inline">内容由 AI 生成</span>
-              )}
+                              {typeof file.indexed_page_count === "number" && (
+                                <div className="text-muted-foreground/80">
+                                  {file.indexed_page_count} 页
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      }
+                    >
+                      <span className="text-muted-foreground/60 hover:text-muted-foreground">
+                        {" "}
+                        {docCountLabel} 个知识库文档
+                      </span>
+                    </Popover>
+                    <span className="inline">和互联网搜索，内容由 AI 生成</span>
+                  </div>
+                ) : (
+                  <span className="inline">内容由 AI 生成</span>
+                )}
+              </div>
             </div>
           </div>
+          <TutorialModal
+            open={isHelpOpen}
+            onClose={() => setIsHelpOpen(false)}
+          />
         </div>
-        <TutorialModal open={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
-      </div>
       ) : (
-        <FeatureUnavailable onBack={() => window.location.href = '/login'} />
+        <FeatureUnavailable onBack={() => (window.location.href = "/login")} />
       )}
     </ProtectedRoute>
   );

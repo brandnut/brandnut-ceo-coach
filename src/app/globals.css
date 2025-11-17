@@ -487,12 +487,13 @@ body {
   }
 }
 
-/* Prevent double-tap zoom */
+/* Prevent double-tap zoom but allow text selection */
 body {
   touch-action: manipulation;
-  -webkit-user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* Allow text selection in inputs */

@@ -108,7 +108,10 @@ export default function LoginPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">正在载入...</div>
+        <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+          <span className="spinner-large"></span>
+          <span className="text-base font-medium">品核 AI 正在载入...</span>
+        </div>
       </div>
     );
   }

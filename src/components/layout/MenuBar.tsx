@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, forwardRef, useImperativeHandle } from "react";
 import { Button, Drawer } from "antd";
 import { MenuOutlined } from "@ant-design/icons";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -12,14 +12,20 @@ interface MenuBarProps {
   sidebarCollapsed: boolean;
   children: React.ReactNode;
   currentConvName?: string;
+  onMobileSidebarClose?: () => void;
 }
 
-export default function MenuBar({
+export interface MenuBarRef {
+  closeMobileSidebar: () => void;
+}
+
+const MenuBar = forwardRef<MenuBarRef, MenuBarProps>(({
   onSidebarToggle,
   sidebarCollapsed,
   children,
   currentConvName,
-}: MenuBarProps) {
+  onMobileSidebarClose,
+}, ref) => {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
   const { organizations } = useApp();
@@ -48,7 +54,21 @@ export default function MenuBar({
 
   const handleDrawerClose = () => {
     setDrawerVisible(false);
+    onMobileSidebarClose?.();
   };
+
+  // Expose mobile sidebar close function to parent
+  const closeMobileSidebar = () => {
+    if (isMobile && drawerVisible) {
+      setDrawerVisible(false);
+      onMobileSidebarClose?.();
+    }
+  };
+
+  // Expose function via ref
+  useImperativeHandle(ref, () => ({
+    closeMobileSidebar
+  }));
 
   return (
     <>
@@ -103,4 +123,8 @@ export default function MenuBar({
       )}
     </>
   );
-}
+});
+
+MenuBar.displayName = 'MenuBar';
+
+export default MenuBar;
