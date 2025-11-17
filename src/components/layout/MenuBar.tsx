@@ -94,7 +94,7 @@ const MenuBar = forwardRef<MenuBarRef, MenuBarProps>(({
                     <h1 className="text-base font-semibold text-gray-900 truncate leading-5">
                       {currentConvName}
                     </h1>
-                    <span className="text-sm text-gray-600 leading-4">
+                    <span className="text-sm text-gray-600 leading-4 font-normal">
                       {getDynamicAppName()}
                     </span>
                   </>

@@ -1,321 +1,84 @@
 export const ceoQuestions = [
-  {
-    category: 'strategy',
-    question: '我怎么判断，现在该"扩张"还是"收缩"？',
-  },
-  {
-    category: 'organization',
-    question: '我的团队越来越执行型，思考力在下降，该怎么办？',
-  },
-  {
-    category: 'strategy',
-    question: '品牌信任已经建立，但增长趋缓，我该做什么第二曲线？',
-  },
-  {
-    category: 'human_resources',
-    question: '核心员工开始流失，是薪酬问题还是文化问题？',
-  },
-  {
-    category: 'marketing',
-    question: '竞争对手在打价格战，我该跟进还是坚持价值定位？',
-  },
-  {
-    category: 'organization',
-    question: '部门墙越来越厚，如何打破信息孤岛？',
-  },
-  {
-    category: 'culture',
-    question: '公司规模大了，如何保持创业初期的敏捷性？',
-  },
-  {
-    category: 'strategy',
-    question: '是该专注现有市场，还是开拓新客户群体？',
-  },
-  {
-    category: 'human_resources',
-    question: '如何识别和培养下一代领导者？',
-  },
-  {
-    category: 'marketing',
-    question: '获客成本越来越高，如何优化营销ROI？',
-  },
-  {
-    category: 'organization',
-    question: '决策链条越来越长，如何提升决策效率？',
-  },
-  {
-    category: 'culture',
-    question: '如何让价值观不仅仅停留在墙上？',
-  },
-  {
-    category: 'strategy',
-    question: '技术变革加速，现有业务模式还能持续多久？',
-  },
-  {
-    category: 'human_resources',
-    question: '如何平衡老员工的忠诚度与新生代的需求？',
-  },
-  {
-    category: 'marketing',
-    question: '品牌知名度够了，但如何提升品牌美誉度？',
-  },
-  {
-    category: 'organization',
-    question: '矩阵式管理 vs 事业部制，哪种更适合当前阶段？',
-  },
-  {
-    category: 'culture',
-    question: '创新文化如何与执行力文化并存？',
-  },
-  {
-    category: 'strategy',
-    question: '多元化还是专业化，如何选择发展路径？',
-  },
-  {
-    category: 'human_resources',
-    question: '如何处理"能力不错但态度有问题"的员工？',
-  },
-  {
-    category: 'marketing',
-    question: '线上流量见顶，线下渠道还有机会吗？',
-  },
-  {
-    category: 'organization',
-    question: '中高层管理梯队出现了断层，怎么办？',
-  },
-  {
-    category: 'culture',
-    question: '如何在追求业绩的同时，不丢掉人文关怀？',
-  },
-  {
-    category: 'strategy',
-    question: '是该并购整合，还是内生增长？',
-  },
-  {
-    category: 'human_resources',
-    question: '绩效考核体系是否还能激发员工潜能？',
-  },
-  {
-    category: 'marketing',
-    question: '用户生命周期价值下降，如何提升客户粘性？',
-  },
-  {
-    category: 'organization',
-    question: '项目制vs部门制，如何组织更能激发创新？',
-  },
-  {
-    category: 'culture',
-    question: '如何处理"说的和做的"不一致问题？',
-  },
-  {
-    category: 'strategy',
-    question: '供应链是该自建还是外包？',
-  },
-  {
-    category: 'human_resources',
-    question: '90后、00后员工管理，需要哪些新思维？',
-  },
-  {
-    category: 'marketing',
-    question: '私域流量真的比公域更有价值吗？',
-  },
-  {
-    category: 'organization',
-    question: '数字化转型的阻力来自哪里？',
-  },
-  {
-    category: 'culture',
-    question: '失败文化如何建立，让员工敢于试错？',
-  },
-  {
-    category: 'strategy',
-    question: '是该深耕存量市场，还是开拓增量市场？',
-  },
-  {
-    category: 'human_resources',
-    question: '股权激励如何设计才能避免短期行为？',
-  },
-  {
-    category: 'marketing',
-    question: '内容营销vs效果广告，预算如何分配？',
-  },
-  {
-    category: 'organization',
-    question: '远程办公vs集中办公，哪种模式更适合我们？',
-  },
-  {
-    category: 'culture',
-    question: '如何平衡结果导向与过程管理？',
-  },
-  {
-    category: 'strategy',
-    question: '是该追求规模效应，还是小而美？',
-  },
-  {
-    category: 'human_resources',
-    question: '员工职业发展通道如何设计才能留住人才？',
-  },
-  {
-    category: 'marketing',
-    question: '产品同质化严重，如何找到差异化卖点？',
-  },
-  {
-    category: 'organization',
-    question: '数据驱动文化如何真正落地？',
-  },
-  {
-    category: 'culture',
-    question: '如何在快速变化中保持企业文化的稳定性？',
-  },
-  {
-    category: 'strategy',
-    question: '全球化还是本土化，如何选择扩张路径？',
-  },
-  {
-    category: 'human_resources',
-    question: '高管团队如何避免山头主义？',
-  },
-  {
-    category: 'marketing',
-    question: '用户口碑传播如何体系化建设？',
-  },
-  {
-    category: 'organization',
-    question: '战略解码如何确保全员理解并执行？',
-  },
-  {
-    category: 'culture',
-    question: '如何让员工有主人翁意识而非打工心态？',
-  },
-  {
-    category: 'strategy',
-    question: '是该专注核心业务，还是生态化发展？',
-  },
-  {
-    category: 'human_resources',
-    question: '人才密度vs人才广度，如何平衡？',
-  },
-  {
-    category: 'marketing',
-    question: '品牌年轻化如何避免"装嫩"？',
-  },
-  {
-    category: 'organization',
-    question: '敏捷组织如何规模化复制？',
-  },
-  {
-    category: 'culture',
-    question: '如何在强调效率的同时，不丢掉人性温度？',
-  },
-  {
-    category: 'strategy',
-    question: '现金流vs增长速度，如何平衡取舍？',
-  },
-  {
-    category: 'human_resources',
-    question: '校园招聘vs社会招聘，人才策略如何制定？',
-  },
-  {
-    category: 'marketing',
-    question: '直播带货是趋势还是泡沫？',
-  },
-  {
-    category: 'organization',
-    question: '中台建设是刚需还是概念？',
-  },
-  {
-    category: 'culture',
-    question: '透明化管理如何掌握分寸？',
-  },
-  {
-    category: 'strategy',
-    question: '上市是目标还是手段？',
-  },
-  {
-    category: 'human_resources',
-    question: '如何处理"功臣"与"新锐"的矛盾？',
-  },
-  {
-    category: 'marketing',
-    question: '用户教育成本过高，如何降低认知门槛？',
-  },
-  {
-    category: 'organization',
-    question: '委员会制度能提升决策质量还是效率？',
-  },
-  {
-    category: 'culture',
-    question: '企业文化该如何传承与创新？',
-  },
-  {
-    category: 'strategy',
-    question: '是该做加法还是做减法？',
-  },
-  {
-    category: 'human_resources',
-    question: '绩效排名制度该废除还是改进？',
-  },
-  {
-    category: 'marketing',
-    question: '社群经济如何避免昙花一现？',
-  },
-  {
-    category: 'organization',
-    question: '咨询顾问是良药还是毒药？',
-  },
-  {
-    category: 'culture',
-    question: '如何在追求创新的同时，控制风险？',
-  },
-  {
-    category: 'strategy',
-    question: '标准化vs个性化，产品策略如何选择？',
-  },
-  {
-    category: 'human_resources',
-    question: '员工满意度调查有意义吗？',
-  },
-  {
-    category: 'marketing',
-    question: '品牌延伸该走相关多元化还是无关多元化？',
-  },
-  {
-    category: 'organization',
-    question: '数字化工具提升了效率还是增加了负担？',
-  },
-  {
-    category: 'culture',
-    question: '如何避免企业文化变成"口号文化"？',
-  },
-  {
-    category: 'strategy',
-    question: '该追求市场份额还是利润率？',
-  },
-  {
-    category: 'human_resources',
-    question: '弹性工作制是福利还是管理难题？',
-  },
-  {
-    category: 'marketing',
-    question: '消费降级时代，高端品牌如何自处？',
-  },
-  {
-    category: 'organization',
-    question: '知识管理体系如何避免形式主义？',
-  },
-  {
-    category: 'culture',
-    question: '如何在危机中保持团队凝聚力？',
-  },
+  '在当前市场环境下，什么是对企业最重要的？',
+  '团队执行力很强，但创新力不足，如何激发深度思考？',
+  '当品牌获得信任后，下一步应该向何处发展？',
+  '核心人才正在流失，这反映了组织的什么问题？',
+  '如何在一个价格竞争激烈的市场中找到自己的位置？',
+  '不同部门之间缺乏沟通，如何建立一个更有效的协作机制？',
+  '企业规模扩大后，如何保持组织的灵活性？',
+  '现有市场饱和时，如何寻找新的增长机会？',
+  '什么样的特质预示着一个人具有领导潜力？',
+  '营销投入增加但效果递减，如何让每一分钱都产生价值？',
+  '决策流程变慢，如何在保持质量的同时提高效率？',
+  '如何让公司的价值观真正影响员工的行为？',
+  '技术快速变化，如何确保企业的核心竞争力能够持续？',
+  '不同代际的员工需求不同，如何创造一个让所有人都感到被重视的环境？',
+  '当大家已经认识你的品牌时，如何建立更深的情感连接？',
+  '在组织成长的不同阶段，什么样的结构最有效？',
+  '如何在追求执行力的同时，为创新留出空间？',
+  '专注于核心业务和多元化发展，各有什么利弊？',
+  '如何处理那些能力很强但态度有问题的员工？',
+  '线上获客成本上升，还有哪些未被充分利用的渠道？',
+  '管理层出现断层，如何建立健康的人才梯队？',
+  '在追求业绩的同时，如何关注员工的身心健康？',
+  '什么情况下选择并购，什么情况下选择有机增长？',
+  '现有的绩效考核还能激发员工的最大潜力吗？',
+  '客户留存率下降，如何重新建立客户关系？',
+  '什么样的组织结构最能促进创新？',
+  '当言行不一致时，如何建立真正的信任？',
+  '供应链应该如何平衡成本、效率和控制？',
+  '管理年轻一代员工，需要什么样的新思维？',
+  '私域流量和公域流量，哪个更适合长期发展？',
+  '数字化转型的最大障碍是什么？',
+  '如何让员工敢于尝试和失败？',
+  '在现有市场和新兴市场之间，如何分配资源？',
+  '如何设计能够支持长期发展的激励计划？',
+  '内容营销和效果营销，应该如何平衡投入？',
+  '远程办公和集中办公，各适合什么样的业务？',
+  '如何在结果导向的过程中，提供必要的支持？',
+  '规模经济和小而美，各有什么价值？',
+  '如何设计让员工愿意长期发展的职业路径？',
+  '当产品和服务相似时，如何让客户选择你？',
+  '如何让数据分析真正指导日常决策？',
+  '在快速变化中，如何保持企业文化的连续性？',
+  '国际化扩张，应该注意哪些关键因素？',
+  '如何防止高管团队形成小团体？',
+  '如何让客户自发地为你传播？',
+  '如何确保公司的战略被每个员工真正理解？',
+  '如何让员工把公司当成自己的事业？',
+  '围绕核心业务构建生态，风险和收益是什么？',
+  '人才的深度和广度，应该如何平衡？',
+  '品牌年轻化，如何做得自然不做作？',
+  '敏捷的工作方式如何在大规模组织中推广？',
+  '提高效率的同时，如何保持人文关怀？',
+  '在现金流和增长之间，如何做出权衡？',
+  '不同来源的人才，各有什么优势和挑战？',
+  '直播带货，对品牌是机遇还是风险？',
+  '企业中台的建设，真正解决了什么问题？',
+  '透明度多高才合适？',
+  '上市，对企业发展意味着什么？',
+  '如何平衡资深员工和新鲜血液的关系？',
+  '如何让客户更容易理解和接受你的产品？',
+  '决策委员会，是提高了质量还是降低了效率？',
+  '企业文化，如何在保持中创新？',
+  '在发展的关键时期，是增加投入还是减少投入？',
+  '绩效排名，应该如何改进？',
+  '社群经济，如何建立持久的商业价值？',
+  '外部咨询顾问，应该如何选择和使用？',
+  '创新和风险，如何找到平衡点？',
+  '标准化和个性化，如何取舍？',
+  '员工满意度调查，如何才能真正反映问题？',
+  '品牌延伸，如何避免损害核心价值？',
+  '数字化工具，是解放了人力还是增加了负担？',
+  '如何避免企业文化只停留在口号上？',
+  '市场份额和盈利能力，哪个更重要？',
+  '弹性工作制，对企业和员工各有什么影响？',
+  '经济环境变化时，高端品牌如何调整策略？',
+  '知识管理，如何真正帮助员工成长？',
+  '在困难时期，如何保持团队的团结？',
 ] as const;
 
 export function getRandomQuestions(count: number = 3) {
   const shuffled = [...ceoQuestions].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, count);
-}
-
-export function getCategoryQuestions(category: string, count: number = 3) {
-  const filtered = ceoQuestions.filter(q => q.category === category);
-  const shuffled = filtered.sort(() => 0.5 - Math.random());
   return shuffled.slice(0, count);
 }

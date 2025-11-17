@@ -58,28 +58,21 @@ export default function Navigation() {
   ];
 
   return (
-    <div
-      className="user-info"
-      style={{
-        padding: "12px 0px",
-        borderBottom: "1px solid #f0f0f0",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between"
-      }}
-    >
+    <div className="w-full flex items-center justify-between">
       {/* User Info - Simple and clean */}
-      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        <Avatar
-          size="small"
-          icon={<UserOutlined />}
-        />
+      <div className="flex items-center gap-3">
+        <Avatar size="small" icon={<UserOutlined />} />
         <div>
-          <Text strong style={{ color: "#262626", fontSize: "14px", display: "block" }}>
+          <Text
+            strong
+            style={{ color: "#262626", fontSize: "14px", display: "block" }}
+          >
             {me.full_name || me.username}
           </Text>
           {currentOrganization && (
-            <Text style={{ color: "#8c8c8c", fontSize: "12px", display: "block" }}>
+            <Text
+              style={{ color: "#8c8c8c", fontSize: "12px", display: "block" }}
+            >
               {currentOrganization.name}
             </Text>
           )}

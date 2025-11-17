@@ -57,7 +57,7 @@ export const tutorialMarkdown = `# 👋 欢迎使用品核 AI —— CEO 教练
 
 `;
 
-export const welcomeQuestions = getRandomQuestions(3).map(item => item.question);
+export const welcomeQuestions = getRandomQuestions(3);
 
 export const welcomeText = {
    greeting: "👋",
