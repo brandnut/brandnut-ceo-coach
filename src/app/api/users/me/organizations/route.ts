@@ -36,9 +36,10 @@ export async function GET(request: NextRequest) {
     const organizationsWithChatConfig = organizationsWithoutRole.map(org => ({
       ...org,
       chatConfig: chatConfig && chatConfig.organization_id === org.id ? {
-        id: chatConfig.id,
+        chat_api_url: chatConfig.chat_api_url,
+        chat_api_key: chatConfig.chat_api_key,
+        organization_name: chatConfig.organization_name,
         organization_id: chatConfig.organization_id,
-        is_active: chatConfig.is_active,
       } : null
     }))
 

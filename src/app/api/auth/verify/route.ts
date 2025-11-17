@@ -3,7 +3,8 @@ import { getCurrentUser } from '@/lib/auth-middleware'
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser(request)
+    const authResult = await getCurrentUser(request)
+    const user = authResult.user
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized', message: 'Valid authentication token required' },

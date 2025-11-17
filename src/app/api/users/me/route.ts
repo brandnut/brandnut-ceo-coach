@@ -110,11 +110,7 @@ export async function GET(request: NextRequest) {
       last_login_at: fullUser.last_login_at ? fullUser.last_login_at.toISOString() : undefined,
       avatar_url: fullUser.avatar_url || undefined,
       phone: fullUser.phone || undefined,
-      roles: roles.map(role => ({
-        ...role,
-        granted_at: role.granted_at.toISOString(),
-        expires_at: role.expires_at ? role.expires_at.toISOString() : undefined
-      })),
+      roles: roles,
       subscriptions: [] // 暂时返回空数组，后续可以根据需要实现
     }
 
