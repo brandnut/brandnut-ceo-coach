@@ -16,7 +16,7 @@ import {
   SettingOutlined,
   TeamOutlined,
   LogoutOutlined,
-  DownOutlined,
+  MoreOutlined,
 } from "@ant-design/icons";
 import { useState } from "react";
 import { useApp } from "@/contexts/AppContext";
@@ -60,59 +60,47 @@ export default function Navigation() {
   return (
     <div
       className="user-info"
-      style={{ padding: "12px 16px", borderBottom: "1px solid #f0f0f0" }}
+      style={{
+        padding: "12px 0px",
+        borderBottom: "1px solid #f0f0f0",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between"
+      }}
     >
-      {/* User Info Section */}
-      <div style={{ marginBottom: "12px" }}>
-        <div
-          style={{ display: "flex", alignItems: "center", marginBottom: "8px" }}
-        >
-          <Avatar
-            size="small"
-            icon={<UserOutlined />}
-            style={{ marginRight: "8px" }}
-          />
-          <Text strong style={{ color: "#1a1a1a", fontSize: "14px" }}>
+      {/* User Info - Simple and clean */}
+      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <Avatar
+          size="small"
+          icon={<UserOutlined />}
+        />
+        <div>
+          <Text strong style={{ color: "#262626", fontSize: "14px", display: "block" }}>
             {me.full_name || me.username}
           </Text>
-        </div>
-
-        {currentOrganization && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              marginLeft: "32px",
-            }}
-          >
-            <TeamOutlined
-              style={{ color: "#666", fontSize: "12px", marginRight: "6px" }}
-            />
-            <Text style={{ color: "#666", fontSize: "12px" }}>
+          {currentOrganization && (
+            <Text style={{ color: "#8c8c8c", fontSize: "12px", display: "block" }}>
               {currentOrganization.name}
             </Text>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Action Buttons */}
-      <div style={{ display: "flex", gap: "8px" }}>
-        <Dropdown
-          menu={{ items: menuItems }}
-          placement="bottomRight"
-          trigger={["click"]}
-          arrow
+      {/* Action Button - More icon with text */}
+      <Dropdown
+        menu={{ items: menuItems }}
+        placement="bottomRight"
+        trigger={["click"]}
+      >
+        <Button
+          type="text"
+          size="small"
+          icon={<MoreOutlined />}
+          style={{ color: "#8c8c8c" }}
         >
-          <Button
-            type="text"
-            size="small"
-            icon={<DownOutlined />}
-            style={{ color: "#666", padding: "4px 8px" }}
-          >
-            更多
-          </Button>
-        </Dropdown>
-      </div>
+          更多
+        </Button>
+      </Dropdown>
     </div>
   );
 }

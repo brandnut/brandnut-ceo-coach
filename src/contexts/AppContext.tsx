@@ -36,6 +36,11 @@ export interface Organization {
   organization_id?: string;
   role?: string;
   joined_at?: string;
+  chatConfig?: {
+    id: string;
+    organization_id: string;
+    is_active: boolean;
+  };
 }
 
 // App context interface - 完全映射 API

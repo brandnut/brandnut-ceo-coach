@@ -16,6 +16,7 @@ import Navigation from "@/components/layout/Navigation";
 import { sendMessage } from "@/lib/api";
 import MenuBar from "@/components/layout/MenuBar";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import FeatureUnavailable from "@/components/FeatureUnavailable";
 import type { UploadFile } from "antd";
 import type { Message as AppMessage } from "@/types";
 import CustomStreamdown from "@/components/CustomStreamdown";
@@ -103,9 +104,12 @@ export default function ChatPage() {
   const [instanceTitle, setInstanceTitle] = useState<string>("");
   const [instanceData, setInstanceData] = useState<any>(null);
   const [isLoadingInstance, setIsLoadingInstance] = useState<boolean>(false);
-  const { me, isLoading } = useApp();
+  const { me, isLoading, logout, organizations } = useApp();
   const isAuthenticated = !!me;
   const router = useRouter();
+
+  // 从组织列表中获取聊天配置
+  const chatConfig = organizations?.find(org => org.chatConfig)?.chatConfig;
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConvId, setCurrentConvId] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -623,6 +627,7 @@ export default function ChatPage() {
     return null;
   }
 
+  
   const SidebarContent = () => (
     <>
       <div className="sidebar-header">
@@ -689,7 +694,8 @@ export default function ChatPage() {
 
   return (
     <ProtectedRoute>
-      <div className="chat-container">
+      {chatConfig ? (
+        <div className="chat-container">
         <Suspense fallback={null}>
           <InstanceHandler
             onInstanceLoaded={setInstanceTitle}
@@ -1067,6 +1073,9 @@ export default function ChatPage() {
         </div>
         <TutorialModal open={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
       </div>
+      ) : (
+        <FeatureUnavailable onBack={() => window.location.href = '/login'} />
+      )}
     </ProtectedRoute>
   );
 }

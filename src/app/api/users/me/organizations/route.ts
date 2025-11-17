@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser, createAuthErrorResponse } from '@/lib/auth-middleware'
-import { getUserOrganizations } from '@/lib/db/queries'
+import { getUserOrganizations, getUserChatConfig } from '@/lib/db/queries'
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,8 +16,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 获取用户所属组织
-    const organizations = await getUserOrganizations(authResult.user.id)
+    // 并行获取用户组织和聊天配置
+    const [organizations, chatConfig] = await Promise.all([
+      getUserOrganizations(authResult.user.id),
+      getUserChatConfig(authResult.user.id)
+    ])
 
     // 过滤掉role字段，只返回组织信息（按照需求不返回role字段）
     const organizationsWithoutRole = organizations.map(org => {
@@ -29,7 +32,19 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json(organizationsWithoutRole)
+    // 将 chatConfig 附加到对应的组织上
+    const organizationsWithChatConfig = organizationsWithoutRole.map(org => ({
+      ...org,
+      chatConfig: chatConfig && chatConfig.organization_id === org.id ? {
+        id: chatConfig.id,
+        organization_id: chatConfig.organization_id,
+        is_active: chatConfig.is_active,
+      } : undefined
+    }))
+
+    return NextResponse.json({
+      organizations: organizationsWithChatConfig
+    })
 
   } catch (error) {
     console.error('Get user organizations failed:', error)

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
+import { Organization } from '@/contexts/AppContext'
 
 interface AuthTokens {
   access_token: string
@@ -43,14 +44,21 @@ export function useAuthLogic() {
   const isAuthenticated = !!tokens // 只要有token就认为是已认证
 
 
-  // Fetch user data and organizations separately
+  // Fetch user data and organizations in parallel
   const fetchUserData = useCallback(async (accessToken: string): Promise<{ user: UserInfo, orgs: Organization[] }> => {
-    // Get user data
-    const userResponse = await fetch('/api/users/me', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    })
+    // Get user data and organizations in parallel
+    const [userResponse, orgResponse] = await Promise.all([
+      fetch('/api/users/me', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      }),
+      fetch('/api/users/me/organizations', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      })
+    ])
 
     if (!userResponse.ok) {
       throw new Error('Failed to get user data')
@@ -58,16 +66,11 @@ export function useAuthLogic() {
 
     const userData = await userResponse.json()
 
-    // Get user organizations separately
-    const orgResponse = await fetch('/api/users/me/organizations', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    })
-
     let organizations: Organization[] = []
+
     if (orgResponse.ok) {
-      organizations = await orgResponse.json()
+      const orgData = await orgResponse.json()
+      organizations = orgData.organizations || []
     }
 
     return { user: userData, orgs: organizations }
@@ -92,72 +95,7 @@ export function useAuthLogic() {
     }
   }, [])
 
-  // Refresh token
-  const refreshToken = useCallback(async (refreshToken: string) => {
-    try {
-      const response = await fetch('/api/auth/refresh', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Token refresh failed')
-      }
-
-      const data = await response.json()
-      const newTokens: AuthTokens = {
-        access_token: data.access_token,
-        refresh_token: data.refresh_token || refreshToken,
-      }
-
-      localStorage.setItem('auth_tokens', JSON.stringify(newTokens))
-
-      await updateAuthState(newTokens)
-    } catch (error) {
-      console.error('Token refresh failed:', error)
-      // Clear auth state - only auth_tokens stored in localStorage
-      localStorage.removeItem('auth_tokens')
-      setMe(null)
-      setOrganizations([])
-      setTokens(null)
-      setIsLoading(false)
-    }
-  }, [])
-
   
-  // Load tokens from localStorage and verify
-  const loadAuthState = useCallback(async () => {
-    try {
-      const storedTokens = localStorage.getItem('auth_tokens')
-      if (!storedTokens) {
-        setIsLoading(false)
-        return
-      }
-
-      const parsedTokens: AuthTokens = JSON.parse(storedTokens)
-
-      // 先设置tokens，让isAuthenticated变为true
-      setTokens(parsedTokens)
-
-      try {
-        await updateAuthState(parsedTokens)
-      } catch (userError) {
-        // Token invalid, try refresh
-        await refreshToken(parsedTokens.refresh_token)
-      }
-    } catch (error) {
-      console.error('Failed to load auth state:', error)
-      // 只在token解析失败时清空，网络错误不清空token
-      setMe(null)
-      setOrganizations([])
-      setTokens(null)
-      setIsLoading(false)
-    }
-  }, [])
-
   // Logout
   const logout = useCallback(async () => {
     try {
@@ -216,7 +154,7 @@ export function useAuthLogic() {
       console.error('Login failed:', error)
       throw error
     }
-  }, [])
+  }, [updateAuthState])
 
   // Send SMS code
   const sendSmsCode = useCallback(async (phone: string) => {
@@ -241,20 +179,69 @@ export function useAuthLogic() {
     }
   }, [])
 
-  // Initialize auth state on mount
+  // Initialize auth state on mount and params change
   useEffect(() => {
-    loadAuthState()
-  }, [loadAuthState])
+    const initializeAuth = async () => {
+      try {
+        const storedTokens = localStorage.getItem('auth_tokens')
+        if (!storedTokens) {
+          setIsLoading(false)
+          return
+        }
 
-  // Refresh on route parameter changes only
-  useEffect(() => {
-    if (isAuthenticated && tokens) {
-      // Only refresh if token exists but user data is missing
-      if (!me || organizations.length === 0) {
-        loadAuthState().catch(console.error)
+        const parsedTokens: AuthTokens = JSON.parse(storedTokens)
+        setTokens(parsedTokens)
+
+        try {
+          const { user, orgs } = await fetchUserData(parsedTokens.access_token)
+          setMe(user)
+          setOrganizations(orgs)
+          setIsLoading(false)
+        } catch (userError) {
+          // Token invalid, try refresh
+          try {
+            const response = await fetch('/api/auth/refresh', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ refresh_token: parsedTokens.refresh_token }),
+            })
+
+            if (response.ok) {
+              const data = await response.json()
+              const newTokens: AuthTokens = {
+                access_token: data.access_token,
+                refresh_token: data.refresh_token || parsedTokens.refresh_token,
+              }
+
+              localStorage.setItem('auth_tokens', JSON.stringify(newTokens))
+
+              const { user, orgs } = await fetchUserData(newTokens.access_token)
+              setMe(user)
+              setOrganizations(orgs)
+              setTokens(newTokens)
+              setIsLoading(false)
+            } else {
+              throw new Error('Token refresh failed')
+            }
+          } catch (refreshError) {
+            localStorage.removeItem('auth_tokens')
+            setMe(null)
+            setOrganizations([])
+            setTokens(null)
+            setIsLoading(false)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load auth state:', error)
+        setMe(null)
+        setOrganizations([])
+        setTokens(null)
+        setIsLoading(false)
       }
     }
-  }, [params]) // Only depend on params to avoid infinite loops
+
+    initializeAuth()
+  }, [params]) // Only re-run when params change
 
   return {
     isAuthenticated,
@@ -265,7 +252,5 @@ export function useAuthLogic() {
     login,
     logout,
     sendSmsCode,
-    refreshToken,
-    loadAuthState,
   }
 }
