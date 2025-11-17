@@ -1,8 +1,9 @@
 version: "3.8"
 
 services:
-  ceo:
+  app:
     image: ghcr.io/brandnut/brandnut-ceo-coach:saas
+    container_name: brandnut-ceo-coach
     ports:
       - "3005:3000"
     restart: unless-stopped
@@ -17,9 +18,15 @@ services:
       - NEXT_PUBLIC_BASE_PATH
       - REDIS_URL
       - SECRET_KEY
+    networks:
+      - brandnut-net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/ceo/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+
+networks:
+  brandnut-net:
+    external: true
