@@ -3,15 +3,16 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 import "@ant-design/v5-patch-for-react-19";
 import { appInfo } from "@/config/app";
+import { getAssetUrl } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: appInfo.title,
   description: appInfo.description,
   icons: {
-    icon: '/favicon.png',
+    icon: getAssetUrl("/favicon.png"),
   },
   viewport: {
-    width: 'device-width',
+    width: "device-width",
     initialScale: 1,
     maximumScale: 1,
     userScalable: false,

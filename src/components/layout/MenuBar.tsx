@@ -6,6 +6,7 @@ import { MenuOutlined } from "@ant-design/icons";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useApp } from "@/contexts/AppContext";
 import { appInfo } from "@/config/app";
+import { getAssetUrl } from "@/lib/utils";
 
 interface MenuBarProps {
   onSidebarToggle: () => void;
@@ -82,7 +83,7 @@ const MenuBar = forwardRef<MenuBarRef, MenuBarProps>(({
           />
           <div className="flex items-center gap-3">
             <img
-              src="/ceo/favicon.png"
+              src={getAssetUrl("/favicon.png")}
               alt="Brandnut"
               className="w-8 h-8 flex-shrink-0"
               style={{ objectFit: 'cover' }}

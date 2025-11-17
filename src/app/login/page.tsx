@@ -6,6 +6,7 @@ import { Form, Input, Button, Alert, Typography, Card, Space } from "antd";
 import { PhoneOutlined, LockOutlined } from "@ant-design/icons";
 import { appInfo } from "@/config/app";
 import { useApp } from "@/contexts/AppContext";
+import { getAssetUrl } from "@/lib/utils";
 
 const { Title } = Typography;
 
@@ -122,7 +123,7 @@ export default function LoginPage() {
         {/* Logo 区域 */}
         <div className="text-center mb-8">
           <img
-            src="/ceo/favicon.png"
+            src={getAssetUrl("/favicon.png")}
             alt={appInfo.name}
             className="w-16 h-16 mx-auto mb-4"
             style={{ objectFit: 'cover' }}
