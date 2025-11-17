@@ -79,5 +79,5 @@ export const guestMode = {
 export const appInfo = {
    name: "品核 AI CEO 教练",
    title: "品核 AI CEO 教练",
-   description: "释放品牌真潜能、企业级记忆协同",
+   description: "懂企业、懂你的贴身 AI 顾问",
 };
