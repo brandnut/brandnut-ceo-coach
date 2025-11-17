@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         id: chatConfig.id,
         organization_id: chatConfig.organization_id,
         is_active: chatConfig.is_active,
-      } : undefined
+      } : null
     }))
 
     return NextResponse.json({

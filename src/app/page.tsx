@@ -113,6 +113,9 @@ export default function ChatPage() {
 
   // 从组织列表中获取聊天配置
   const chatConfig = organizations?.find((org) => org.chatConfig)?.chatConfig;
+
+  // 检查用户是否是管理员
+  const isAdmin = me?.roles?.some(role => role.role_name === '管理员');
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConvId, setCurrentConvId] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -729,7 +732,7 @@ export default function ChatPage() {
 
   return (
     <ProtectedRoute>
-      {chatConfig ? (
+      {chatConfig && isAdmin ? (
         <div className="chat-container">
           <Suspense fallback={null}>
             <InstanceHandler
@@ -1119,7 +1122,16 @@ export default function ChatPage() {
           />
         </div>
       ) : (
-        <FeatureUnavailable onBack={() => (window.location.href = "/login")} />
+        <FeatureUnavailable
+          onBack={() => (window.location.href = "/login")}
+          type={
+            !organizations || organizations.length === 0
+              ? 'no_organization'
+              : chatConfig
+                ? 'no_permission'
+                : 'no_feature'
+          }
+        />
       )}
     </ProtectedRoute>
   );

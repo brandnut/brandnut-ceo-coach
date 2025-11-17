@@ -1,18 +1,24 @@
 import { Card, Typography, Button, Steps } from "antd";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import { useApp } from "@/contexts/AppContext";
-import { brandnutStyles } from "@/lib/styles";
+import { featureUnavailableTexts } from "@/lib/styles";
 
 const { Title, Paragraph } = Typography;
 
 interface FeatureUnavailableProps {
   onBack?: () => void;
+  type?: 'no_feature' | 'no_permission' | 'no_organization';
 }
 
 export default function FeatureUnavailable({
   onBack,
+  type = 'no_feature',
 }: FeatureUnavailableProps) {
   const { me, organizations, logout } = useApp();
+
+  // 准备用户和组织信息
+  const userName = me?.full_name || me?.username || '';
+  const orgName = organizations?.[0]?.name || '';
 
   return (
     <div
@@ -22,7 +28,7 @@ export default function FeatureUnavailable({
         alignItems: "center",
         minHeight: "100vh",
         padding: "20px",
-        background: brandnutStyles.background.gradient,
+        background: 'var(--brandnut-bg-gradient)',
       }}
     >
       <Card style={{ maxWidth: "400px", textAlign: "center" }}>
@@ -31,63 +37,64 @@ export default function FeatureUnavailable({
         />
 
         <Title level={4} style={{ marginBottom: "8px" }}>
-          功能未开通
+          {featureUnavailableTexts.titles[type]}
         </Title>
 
         <Paragraph style={{ color: "#666", marginBottom: "16px" }}>
-          {me?.full_name || me?.username
-            ? `${me?.full_name || me?.username}${
-                organizations?.[0]?.name ? "，" : ""
-              }`
-            : ""}
-          {organizations?.[0]?.name ? `您的组织 ${organizations[0].name} ` : ""}
-          尚未开通 CEO 教练
+          {type === 'no_organization'
+            ? featureUnavailableTexts.messages.no_organization(userName)
+            : featureUnavailableTexts.messages[type](userName, orgName)
+          }
         </Paragraph>
 
-        {/* Service Steps */}
-        <div
-          style={{
-            backgroundColor: "#fafafa",
-            borderRadius: "8px",
-            padding: "16px",
-            marginBottom: "16px",
-          }}
-        >
-          <style>{`
-            .ant-steps-item-wait .ant-steps-item-title {
-              color: #333 !important;
-            }
-          `}</style>
-          <Steps
-            direction="vertical"
-            size="small"
-            items={[
-              {
-                title: "接受深度访谈",
-                status: "wait",
-              },
-              {
-                title: "获得战略诊断报告",
-                status: "wait",
-              },
-              {
-                title: "获得 CEO 教练",
-                status: "wait",
-              },
-            ]}
-          />
-        </div>
+        {type === 'no_feature' && (
+          <>
+            {/* Service Steps */}
+            <div
+              style={{
+                backgroundColor: "#fafafa",
+                borderRadius: "8px",
+                padding: "16px",
+                marginBottom: "16px",
+              }}
+            >
+              <style>{`
+                .ant-steps-item-wait .ant-steps-item-title {
+                  color: #333 !important;
+                }
+              `}</style>
+              <Steps
+                direction="vertical"
+                size="small"
+                items={[
+                  {
+                    title: featureUnavailableTexts.steps.interview,
+                    status: "wait",
+                  },
+                  {
+                    title: featureUnavailableTexts.steps.report,
+                    status: "wait",
+                  },
+                  {
+                    title: featureUnavailableTexts.steps.coach,
+                    status: "wait",
+                  },
+                ]}
+              />
+            </div>
 
-        {/* Apply Button */}
-        <Button
-          type="primary"
-          size="large"
-          href="https://kcn07wjuhe5v.feishu.cn/share/base/form/shrcnJL83hAVYH1gQt2k1mpuOlh"
-          target="_blank"
-          style={{ width: "100%", marginBottom: "12px" }}
-        >
-          申请深度访谈
-        </Button>
+            {/* Apply Button */}
+            <Button
+              type="primary"
+              size="large"
+              href="https://kcn07wjuhe5v.feishu.cn/share/base/form/shrcnJL83hAVYH1gQt2k1mpuOlh"
+              target="_blank"
+              style={{ width: "100%", marginBottom: "12px" }}
+            >
+              {featureUnavailableTexts.buttons.apply_interview}
+            </Button>
+          </>
+        )}
 
         {/* Logout Button */}
         <Button
@@ -98,7 +105,7 @@ export default function FeatureUnavailable({
           }}
           style={{ width: "100%" }}
         >
-          退出登录
+          {featureUnavailableTexts.buttons.logout}
         </Button>
       </Card>
     </div>
