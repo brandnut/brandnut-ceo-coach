@@ -117,12 +117,37 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md shadow-lg">
+    <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(180deg, #f5271f14, #f5271f05)' }}>
+      <div className="w-full max-w-md">
+        {/* Logo 区域 */}
         <div className="text-center mb-8">
-          <Title level={2}>{appInfo.name}</Title>
-          <Typography.Text type="secondary">请使用手机号登录</Typography.Text>
+          <img
+            src="/favicon.png"
+            alt={appInfo.name}
+            className="w-16 h-16 mx-auto mb-4"
+            style={{ objectFit: 'cover' }}
+          />
+          <Title level={2} className="mb-2" style={{ color: '#1f2937', fontWeight: 600, fontSize: '24px' }}>
+            {appInfo.name}
+          </Title>
+          <Typography.Text style={{ color: '#6b7280', fontSize: '16px' }}>
+            懂企业、懂你的贴身 AI 顾问
+          </Typography.Text>
         </div>
+
+        {/* 主卡片 */}
+        <Card
+          className="shadow-2xl border-0"
+          style={{
+            borderRadius: '16px',
+            paddingTop: '1rem',
+            paddingBottom: '0',
+            paddingLeft: '1.5rem',
+            paddingRight: '1.5rem',
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
 
         {state.error && (
           <Alert message={state.error} type="error" showIcon className="mb-6" />
@@ -141,78 +166,142 @@ export default function LoginPage() {
           form={form}
           onFinish={handleLogin}
           layout="vertical"
-          size="large"
           initialValues={{ phone: state.phone, code: state.code }}
         >
-          <Form.Item
-            name="phone"
-            rules={[
-              { required: true, message: "请输入手机号" },
-              { pattern: /^1[3-9]\d{9}$/, message: "请输入正确的手机号格式" },
-            ]}
-          >
-            <Input
-              prefix={<PhoneOutlined />}
-              placeholder="请输入手机号"
-              maxLength={11}
-              onChange={(e) =>
-                setState((prev) => ({ ...prev, phone: e.target.value }))
-              }
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="code"
-            rules={[
-              { required: true, message: "请输入验证码" },
-              { pattern: /^\d{6}$/, message: "验证码为6位数字" },
-            ]}
-          >
-            <Space.Compact style={{ width: "100%" }}>
+          {/* 手机号输入 */}
+          <div className="mb-6">
+            <label className="block text-xs font-medium mb-2" style={{ color: '#374151', fontSize: '12px' }}>
+              手机号
+            </label>
+            <Form.Item
+              name="phone"
+              rules={[
+                { required: true, message: "请输入手机号" },
+                { pattern: /^1[3-9]\d{9}$/, message: "请输入正确的手机号格式" },
+              ]}
+              className="mb-0"
+            >
               <Input
-                prefix={<LockOutlined />}
-                placeholder="请输入验证码"
-                maxLength={6}
+                size="large"
+                placeholder="请输入手机号"
+                maxLength={11}
                 onChange={(e) =>
-                  setState((prev) => ({ ...prev, code: e.target.value }))
+                  setState((prev) => ({ ...prev, phone: e.target.value }))
                 }
+                style={{
+                  borderRadius: '10px',
+                  border: '1px solid #fdd5d2',
+                  background: '#fff3f2',
+                  padding: '12px 16px',
+                  fontSize: '14px'
+                }}
+                className="focus:border-red-500 focus:shadow-sm transition-all"
               />
+            </Form.Item>
+          </div>
+
+          {/* 验证码输入 */}
+          <div className="mb-6">
+            <label className="block text-xs font-medium mb-2" style={{ color: '#374151', fontSize: '12px' }}>
+              短信验证码
+            </label>
+            <div className="flex gap-2">
+              <Form.Item
+                name="code"
+                rules={[
+                  { required: true, message: "请输入验证码" },
+                  { pattern: /^\d{6}$/, message: "验证码为6位数字" },
+                ]}
+                className="flex-1 mb-0"
+              >
+                <Input
+                  size="large"
+                  placeholder="验证码"
+                  maxLength={6}
+                  onChange={(e) =>
+                    setState((prev) => ({ ...prev, code: e.target.value }))
+                  }
+                  style={{
+                    borderRadius: '10px',
+                    border: '1px solid #fdd5d2',
+                    background: '#fff3f2',
+                    padding: '12px 16px',
+                    fontSize: '14px'
+                  }}
+                  className="focus:border-red-500 focus:shadow-sm transition-all"
+                />
+              </Form.Item>
               <Button
+                size="large"
                 onClick={() => sendSmsCode(state.phone)}
                 disabled={
                   !state.phone || state.countdown > 0 || state.sendingCode
                 }
                 loading={state.sendingCode}
-                style={{ minWidth: 120 }}
+                style={{
+                  minWidth: '120px',
+                  borderRadius: '10px',
+                  background: '#f3f4f6',
+                  borderColor: 'transparent',
+                  color: state.phone && !state.countdown && !state.sendingCode ? '#6b7280' : '#9ca3af',
+                  fontWeight: 400,
+                  fontSize: '14px',
+                  transition: 'all 0.2s ease'
+                }}
+                className="hover:bg-gray-300"
               >
                 {state.countdown > 0
                   ? `${state.countdown}s后重发`
                   : state.sendingCode
                   ? "发送中..."
-                  : "获取验证码"}
+                  : "发送验证码"}
               </Button>
-            </Space.Compact>
-          </Form.Item>
+            </div>
+          </div>
 
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={isLoading}
-              block
-              disabled={!state.phone || !state.code}
-            >
-              {isLoading ? "登录中..." : "登录"}
-            </Button>
-          </Form.Item>
+          {/* 登录按钮 */}
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={isLoading}
+            block
+            size="large"
+            disabled={!state.phone || !state.code}
+            style={{
+              borderRadius: '10px',
+              height: '48px',
+              background: state.phone && state.code && !isLoading
+                ? 'linear-gradient(135deg, #d51f19 0%, #f5271f 100%)'
+                : 'linear-gradient(135deg, #f87171 0%, #f87171 100%)',
+              borderColor: 'transparent',
+              color: '#ffffff',
+              fontSize: '14px',
+              fontWeight: 400,
+              transition: 'all 0.2s ease'
+            }}
+            className="hover:shadow-lg hover:-translate-y-0.5"
+          >
+            {isLoading ? "登录中..." : "立即登录"}
+          </Button>
         </Form>
 
-        <div className="text-center">
-          <Typography.Text type="secondary" className="text-sm">
-            登录即表示同意服务条款和隐私政策
+        {/* 隐私条款 */}
+        <div className="text-center mt-6">
+          <Typography.Text style={{ color: '#9ca3af', fontSize: '12px' }}>
+            登录即代表您已阅读并同意
           </Typography.Text>
+          <a
+            href="https://brandnut.cn/privacy.txt"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#d51f19', textDecoration: 'none', fontSize: '12px' }}
+            className="hover:underline ml-1"
+          >
+            隐私政策
+          </a>
         </div>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }
