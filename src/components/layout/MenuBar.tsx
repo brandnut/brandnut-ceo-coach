@@ -73,35 +73,43 @@ const MenuBar = forwardRef<MenuBarRef, MenuBarProps>(({
   return (
     <>
       <div className={`h-16 bg-white border-b border-gray-200 flex items-center justify-between sticky top-0 z-10 ${isMobile ? 'px-4' : 'px-6'}`}>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center">
           <Button
             type="text"
             icon={<MenuOutlined />}
             onClick={handleMenuClick}
             className="text-gray-600 hover:text-gray-900"
           />
-          {isMobile ? (
-            <div className="flex flex-col leading-tight">
-              {currentConvName ? (
-                <>
-                  <h1 className="text-base font-semibold text-gray-900 truncate">
-                    {currentConvName}
-                  </h1>
-                  <span className="text-sm text-gray-600">
+          <div className="flex items-center gap-3">
+            <img
+              src="/favicon.png"
+              alt="Brandnut"
+              className="w-8 h-8 flex-shrink-0"
+              style={{ objectFit: 'cover' }}
+            />
+            {isMobile ? (
+              <div className="flex flex-col leading-tight" style={{ minHeight: '32px' }}>
+                {currentConvName ? (
+                  <>
+                    <h1 className="text-base font-semibold text-gray-900 truncate leading-5">
+                      {currentConvName}
+                    </h1>
+                    <span className="text-sm text-gray-600 leading-4">
+                      {getDynamicAppName()}
+                    </span>
+                  </>
+                ) : (
+                  <h1 className="text-lg font-semibold text-gray-900 leading-6">
                     {getDynamicAppName()}
-                  </span>
-                </>
-              ) : (
-                <h1 className="text-lg font-semibold text-gray-900">
-                  {getDynamicAppName()}
-                </h1>
-              )}
-            </div>
-          ) : (
-            <h1 className="text-lg font-semibold text-gray-900">
-              {getDynamicAppName()}
-            </h1>
-          )}
+                  </h1>
+                )}
+              </div>
+            ) : (
+              <h1 className="text-lg font-semibold text-gray-900 leading-6">
+                {getDynamicAppName()}
+              </h1>
+            )}
+          </div>
         </div>
       </div>
 
