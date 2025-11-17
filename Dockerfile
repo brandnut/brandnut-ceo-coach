@@ -49,6 +49,7 @@ RUN adduser -S nextjs -u 1001
 # Copy built application
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 
 # Change ownership
 RUN chown -R nextjs:nodejs /app
