@@ -20,7 +20,7 @@ export default function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { me, isLoading } = useApp()
   const isAuthenticated = !!me
-  const isAdmin = me?.roles?.some(role => role.name === '管理员') || false
+  const isAdmin = me?.roles?.some(role => role.role_name === '管理员') || false
   const router = useRouter()
 
   useEffect(() => {

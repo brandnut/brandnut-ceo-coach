@@ -116,7 +116,7 @@ export async function getUserChatConfig(userId: string, organizationId?: string)
       return null
     }
 
-    const userOrgIds = orgResult.rows.map(row => row.organization_id)
+    const userOrgIds = orgResult.rows.map((row: any) => row.organization_id)
 
     let query = `
       SELECT

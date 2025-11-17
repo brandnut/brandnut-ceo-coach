@@ -1,10 +1,6 @@
 import type { AttachmentFile } from '@/types'
-
-// Helper function to get API URL with basePath
-function getApiUrl(path: string): string {
-  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
-  return `${basePath}${path}`
-}
+import { storage, storageKeys } from '@/lib/storage'
+import { getApiUrl, getAuthHeaders } from '@/lib/utils'
 
 interface UploadOptions {
   file: File
@@ -49,6 +45,13 @@ export const uploadFile = ({ file, onProgress, onSuccess, onError }: UploadOptio
   }
 
   xhr.open('POST', getApiUrl('/api/files/upload'))
+
+  // Add Authorization header
+  const authHeaders = getAuthHeaders(storage, storageKeys)
+  Object.entries(authHeaders).forEach(([key, value]) => {
+    xhr.setRequestHeader(key, value)
+  })
+
   xhr.send(formData)
 
   // Return abort function

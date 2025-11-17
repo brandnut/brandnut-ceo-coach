@@ -3,7 +3,6 @@ import Redis from 'ioredis'
 // Redis 连接配置 - 照搬 brandnut-ops
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379/0', {
   maxRetriesPerRequest: 3,
-  retryDelayOnFailover: 100,
   lazyConnect: true,
 })
 

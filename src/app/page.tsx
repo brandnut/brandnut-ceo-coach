@@ -5,11 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useApp } from "@/contexts/AppContext";
 import { storage, storageKeys } from "@/lib/storage";
 
-// Helper function to get API URL with basePath
-function getApiUrl(path: string): string {
-  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
-  return `${basePath}${path}`
-}
 import { Sender, Attachments, Conversations } from "@ant-design/x";
 import { Popover, Upload } from "antd";
 import {
@@ -21,6 +16,7 @@ import {
 import TutorialModal from "@/components/TutorialModal";
 import Navigation from "@/components/layout/Navigation";
 import { sendMessage } from "@/lib/api";
+import { getApiUrl, getAuthHeaders } from "@/lib/utils";
 import MenuBar, { type MenuBarRef } from "@/components/layout/MenuBar";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import FeatureUnavailable from "@/components/FeatureUnavailable";
@@ -72,7 +68,7 @@ function InstanceHandler({
       onLoadingChange(true);
       console.log(`🔍 Fetching instance config for: ${instanceId}`);
 
-      const response = await fetch(`/api/instance/${instanceId}`, {
+      const response = await fetch(getApiUrl(`/api/instance/${instanceId}`), {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -260,21 +256,12 @@ export default function ChatPage() {
 
     try {
       // Get auth headers
-      const storedTokens = storage.getItem(storageKeys.AUTH_TOKENS);
-      const headers: Record<string, string> = {
+      const headers = {
+        ...getAuthHeaders(storage, storageKeys),
         "Content-Type": "application/json",
       };
 
-      if (storedTokens) {
-        try {
-          const { access_token } = JSON.parse(storedTokens);
-          headers["Authorization"] = `Bearer ${access_token}`;
-        } catch (error) {
-          console.error("Error parsing tokens:", error);
-        }
-      }
-
-      const response = await fetch(`/api/conversations/${convId}/messages`, {
+      const response = await fetch(getApiUrl(`/api/conversations/${convId}/messages`), {
         headers,
       });
       if (!response.ok) {
@@ -325,7 +312,7 @@ export default function ChatPage() {
     }
 
     // Call Dify stop API
-    const userName = guestMode.enabled ? guestMode.username : user?.username;
+    const userName = guestMode.enabled ? guestMode.username : me?.username;
     if (currentTaskIdRef.current && userName) {
       try {
         // Get auth headers
@@ -523,19 +510,10 @@ export default function ChatPage() {
 
     try {
       // Get auth headers
-      const storedTokens = storage.getItem(storageKeys.AUTH_TOKENS);
-      const headers: Record<string, string> = {
+      const headers = {
+        ...getAuthHeaders(storage, storageKeys),
         "Content-Type": "application/json",
       };
-
-      if (storedTokens) {
-        try {
-          const { access_token } = JSON.parse(storedTokens);
-          headers["Authorization"] = `Bearer ${access_token}`;
-        } catch (error) {
-          console.error("Error parsing tokens:", error);
-        }
-      }
 
       const response = await fetch(getApiUrl("/api/chat/messages"), {
         method: "POST",
@@ -1049,7 +1027,14 @@ export default function ChatPage() {
                           );
                         };
 
-                        xhr.open("POST", "/api/files/upload");
+                        xhr.open("POST", getApiUrl("/api/files/upload"));
+
+                        // Add Authorization header
+                        const authHeaders = getAuthHeaders(storage, storageKeys);
+                        Object.entries(authHeaders).forEach(([key, value]) => {
+                          xhr.setRequestHeader(key, value);
+                        });
+
                         xhr.send(formData);
 
                         return false; // Prevent default upload

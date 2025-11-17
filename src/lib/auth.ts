@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 export async function auth() {
   try {
     // 从请求头中获取 Authorization token
-    const headersList = cookies()
+    const headersList = await cookies()
     let authorization: string | null = null
 
     // 尝试从 cookie 中获取
@@ -20,7 +20,7 @@ export async function auth() {
       return null
     }
 
-    const user = await getCurrentUser({
+    const result = await getCurrentUser({
       headers: {
         get: (key: string) => {
           if (key === 'authorization') return authorization
@@ -28,6 +28,8 @@ export async function auth() {
         }
       }
     } as any)
+
+    const user = result.user
 
     if (!user) {
       return null

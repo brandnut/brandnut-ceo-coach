@@ -1,5 +1,6 @@
 import { VisionFile } from '@/types'
 import { storage, storageKeys } from '@/lib/storage'
+import { getApiUrl, getAuthHeaders } from '@/lib/utils'
 
 export interface Message {
   id: string
@@ -20,28 +21,6 @@ export interface ConversationsResponse {
   limit: number
 }
 
-// Helper function to get API URL with basePath
-function getApiUrl(path: string): string {
-  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
-  return `${basePath}${path}`
-}
-
-// Helper function to get auth headers
-function getAuthHeaders(): Record<string, string> {
-  const storedTokens = storage.getItem(storageKeys.AUTH_TOKENS)
-  const headers: Record<string, string> = {}
-
-  if (storedTokens) {
-    try {
-      const { access_token } = JSON.parse(storedTokens)
-      headers['Authorization'] = `Bearer ${access_token}`
-    } catch (error) {
-      console.error('Error parsing tokens:', error)
-    }
-  }
-
-  return headers
-}
 
 export async function uploadFile(
   file: File,
@@ -77,6 +56,13 @@ export async function uploadFile(
     xhr.onerror = () => reject(new Error('Network error'))
 
     xhr.open('POST', getApiUrl('/api/files/upload'))
+
+    // Add Authorization header
+    const authHeaders = getAuthHeaders(storage, storageKeys)
+    Object.entries(authHeaders).forEach(([key, value]) => {
+      xhr.setRequestHeader(key, value)
+    })
+
     xhr.send(formData)
   })
 }
@@ -96,7 +82,7 @@ export async function sendMessage(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthHeaders(),
+        ...getAuthHeaders(storage, storageKeys),
       },
       body: JSON.stringify({
         query,
@@ -175,7 +161,7 @@ export async function getConversations(
     }
 
     const response = await fetch(getApiUrl(`/api/conversations?${params}`), {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(storage, storageKeys)
     })
 
     if (!response.ok) {
@@ -201,7 +187,7 @@ export async function deleteConversation(conversationId: string): Promise<boolea
   try {
     const response = await fetch(getApiUrl(`/api/conversations/${conversationId}`), {
       method: 'DELETE',
-      headers: getAuthHeaders(),
+      headers: getAuthHeaders(storage, storageKeys),
     })
 
     return response.ok
@@ -214,7 +200,7 @@ export async function getMessages(conversationId: string): Promise<Message[]> {
   try {
     const response = await fetch(
       getApiUrl(`/api/conversations/${conversationId}/messages`),
-      { headers: getAuthHeaders() }
+      { headers: getAuthHeaders(storage, storageKeys) }
     )
 
     if (!response.ok) return []
