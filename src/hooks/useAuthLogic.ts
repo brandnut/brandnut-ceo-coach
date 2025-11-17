@@ -3,6 +3,12 @@ import { useParams } from 'next/navigation'
 import { Organization } from '@/contexts/AppContext'
 import { storage, storageKeys } from '@/lib/storage'
 
+// Helper function to get API URL with basePath
+function getApiUrl(path: string): string {
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
+  return `${basePath}${path}`
+}
+
 interface AuthTokens {
   access_token: string
   refresh_token: string
@@ -49,12 +55,12 @@ export function useAuthLogic() {
   const fetchUserData = useCallback(async (accessToken: string): Promise<{ user: UserInfo, orgs: Organization[] }> => {
     // Get user data and organizations in parallel
     const [userResponse, orgResponse] = await Promise.all([
-      fetch('/api/users/me', {
+      fetch(getApiUrl('/api/users/me'), {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
         },
       }),
-      fetch('/api/users/me/organizations', {
+      fetch(getApiUrl('/api/users/me/organizations'), {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
         },
@@ -103,7 +109,7 @@ export function useAuthLogic() {
       const tokens = storage.getItem(storageKeys.AUTH_TOKENS)
       if (tokens) {
         const { refresh_token } = JSON.parse(tokens)
-        await fetch('/api/auth/logout', {
+        await fetch(getApiUrl('/api/auth/logout'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -201,7 +207,7 @@ export function useAuthLogic() {
         } catch (userError) {
           // Token invalid, try refresh
           try {
-            const response = await fetch('/api/auth/refresh', {
+            const response = await fetch(getApiUrl('/api/auth/refresh'), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ refresh_token: parsedTokens.refresh_token }),

@@ -20,6 +20,12 @@ export interface ConversationsResponse {
   limit: number
 }
 
+// Helper function to get API URL with basePath
+function getApiUrl(path: string): string {
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
+  return `${basePath}${path}`
+}
+
 // Helper function to get auth headers
 function getAuthHeaders(): Record<string, string> {
   const storedTokens = storage.getItem(storageKeys.AUTH_TOKENS)
@@ -70,7 +76,7 @@ export async function uploadFile(
 
     xhr.onerror = () => reject(new Error('Network error'))
 
-    xhr.open('POST', '/api/files/upload')
+    xhr.open('POST', getApiUrl('/api/files/upload'))
     xhr.send(formData)
   })
 }
@@ -86,7 +92,7 @@ export async function sendMessage(
   onNodeStarted?: (title: string) => void
 ): Promise<void> {
   try {
-    const response = await fetch('/api/chat/messages', {
+    const response = await fetch(getApiUrl('/api/chat/messages'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -168,7 +174,7 @@ export async function getConversations(
       params.append('last_id', lastId)
     }
 
-    const response = await fetch(`/api/conversations?${params}`, {
+    const response = await fetch(getApiUrl(`/api/conversations?${params}`), {
       headers: getAuthHeaders()
     })
 
@@ -193,7 +199,7 @@ export async function getConversations(
 
 export async function deleteConversation(conversationId: string): Promise<boolean> {
   try {
-    const response = await fetch(`/api/conversations/${conversationId}`, {
+    const response = await fetch(getApiUrl(`/api/conversations/${conversationId}`), {
       method: 'DELETE',
       headers: getAuthHeaders(),
     })
@@ -207,7 +213,7 @@ export async function deleteConversation(conversationId: string): Promise<boolea
 export async function getMessages(conversationId: string): Promise<Message[]> {
   try {
     const response = await fetch(
-      `/api/conversations/${conversationId}/messages`,
+      getApiUrl(`/api/conversations/${conversationId}/messages`),
       { headers: getAuthHeaders() }
     )
 

@@ -1,5 +1,11 @@
 import type { AttachmentFile } from '@/types'
 
+// Helper function to get API URL with basePath
+function getApiUrl(path: string): string {
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
+  return `${basePath}${path}`
+}
+
 interface UploadOptions {
   file: File
   onProgress: (percent: number) => void
@@ -42,7 +48,7 @@ export const uploadFile = ({ file, onProgress, onSuccess, onError }: UploadOptio
     onError(new Error('Network error'))
   }
 
-  xhr.open('POST', '/api/files/upload')
+  xhr.open('POST', getApiUrl('/api/files/upload'))
   xhr.send(formData)
 
   // Return abort function

@@ -4,6 +4,12 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useApp } from "@/contexts/AppContext";
 import { storage, storageKeys } from "@/lib/storage";
+
+// Helper function to get API URL with basePath
+function getApiUrl(path: string): string {
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
+  return `${basePath}${path}`
+}
 import { Sender, Attachments, Conversations } from "@ant-design/x";
 import { Popover, Upload } from "antd";
 import {
@@ -337,7 +343,7 @@ export default function ChatPage() {
           }
         }
 
-        await fetch("/api/chat/stop", {
+        await fetch(getApiUrl("/api/chat/stop"), {
           method: "POST",
           headers,
           body: JSON.stringify({
@@ -531,7 +537,7 @@ export default function ChatPage() {
         }
       }
 
-      const response = await fetch("/api/chat/messages", {
+      const response = await fetch(getApiUrl("/api/chat/messages"), {
         method: "POST",
         headers,
         body: JSON.stringify({

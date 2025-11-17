@@ -122,7 +122,7 @@ export default function LoginPage() {
         {/* Logo 区域 */}
         <div className="text-center mb-8">
           <img
-            src="/favicon.png"
+            src="/ceo/favicon.png"
             alt={appInfo.name}
             className="w-16 h-16 mx-auto mb-4"
             style={{ objectFit: 'cover' }}
