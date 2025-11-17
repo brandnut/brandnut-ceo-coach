@@ -505,3 +505,9 @@ textarea {
   -webkit-user-select: text;
   user-select: text;
 }
+
+/* File preview background */
+.file-preview-bg {
+  background-color: hsl(var(--muted) / 0.5);
+  border: 1px solid hsl(var(--border));
+}

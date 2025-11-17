@@ -1,3 +1,5 @@
+import { getRandomQuestions } from "@/lib/ceo-questions";
+
 export const tutorialMarkdown = `# 👋 欢迎使用品核 AI —— CEO 教练
 
 **CEO 教练**是一位懂战略、懂企业、懂你的顾问。  
@@ -55,11 +57,7 @@ export const tutorialMarkdown = `# 👋 欢迎使用品核 AI —— CEO 教练
 
 `;
 
-export const welcomeQuestions = [
-   "我怎么判断，现在该“扩张”还是“收缩”？",
-   "我的团队越来越执行型，思考力在下降，该怎么办？",
-   "品牌信任已经建立，但增长趋缓，我该做什么第二曲线？",
-];
+export const welcomeQuestions = getRandomQuestions(3).map(item => item.question);
 
 export const welcomeText = {
    greeting: "👋",
