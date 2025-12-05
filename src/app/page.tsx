@@ -23,6 +23,8 @@ import FeatureUnavailable from "@/components/FeatureUnavailable";
 import type { UploadFile } from "antd";
 import type { Message as AppMessage } from "@/types";
 import CustomStreamdown from "@/components/CustomStreamdown";
+import { AgentLogAccordion } from "@/components/AgentLogCard";
+import { AgentLog } from "@/types";
 import { Button } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { getConversations, deleteConversation } from "@/lib/api";
@@ -588,7 +590,47 @@ export default function ChatPage() {
               setWorkflowStatus("正在思考");
             } else if (data.event === "node_started") {
               setWorkflowStatus(data.data?.title || "正在思考");
+            } else if (data.event === "error") {
+              console.log('[SSE] error:', data.message);
+              const errorMessage = data.message || 'Unknown error';
+              // 显示错误在助手消息中
+              assistantContent += `⚠️ 错误：${errorMessage}`;
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMsgId
+                    ? { ...msg, content: assistantContent }
+                    : msg
+                )
+              );
             } else if (data.event === "agent_log") {
+              // 只有当 label 以 "CALL " 开头时才创建 agent log
+              const isToolCall = data.data.label?.startsWith('CALL ');
+
+              if (isToolCall) {
+                // 将 agent log 关联到当前助手消息
+                const agentLog: AgentLog = {
+                  id: data.data.id, // 使用 agent log 自己的 id
+                  conversation_id: data.conversation_id,
+                  message_id: data.message_id,
+                  task_id: data.task_id,
+                  created_at: data.created_at,
+                  data: data.data
+                };
+
+                setMessages(prev => prev.map(msg =>
+                  msg.id === assistantMsgId
+                    ? {
+                        ...msg,
+                        agent_logs: [
+                          ...(msg.agent_logs || []).filter(log => log.id !== data.data.id), // 按 agent log 的 id 去重
+                          agentLog
+                        ]
+                      }
+                    : msg
+                ));
+              }
+
+              // 保留原有的 workflowStatus 处理逻辑
               const queryMatch = payload.match(
                 /"query":("(?:(?:\\.)|[^"\\])*")/
               );
@@ -628,6 +670,7 @@ export default function ChatPage() {
     } finally {
       setIsStreaming(false);
       setWorkflowStatus("");
+      // 保留 agent logs 供查看，不清空
       currentTaskIdRef.current = null;
       abortControllerRef.current = null;
     }
@@ -861,6 +904,11 @@ export default function ChatPage() {
                                 {workflowStatus}
                               </span>
                             </div>
+                          )}
+
+                          {/* Agent Logs 显示区域：在助手消息且有 logs 时显示 */}
+                          {msg.role === "assistant" && msg.agent_logs && msg.agent_logs.length > 0 && (
+                            <AgentLogAccordion logs={msg.agent_logs} />
                           )}
 
                           <div className="markdown-body">
