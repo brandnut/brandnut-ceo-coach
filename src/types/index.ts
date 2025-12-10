@@ -11,6 +11,7 @@ export interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
+  think_content?: string
   message_files?: MessageFile[]
   agent_logs?: AgentLog[]
 }

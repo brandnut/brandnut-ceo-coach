@@ -15,7 +15,6 @@ import {
 } from "@ant-design/icons";
 import TutorialModal from "@/components/TutorialModal";
 import Navigation from "@/components/layout/Navigation";
-import { sendMessage } from "@/lib/api";
 import { getApiUrl, getAuthHeaders } from "@/lib/utils";
 import MenuBar, { type MenuBarRef } from "@/components/layout/MenuBar";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
@@ -23,6 +22,7 @@ import FeatureUnavailable from "@/components/FeatureUnavailable";
 import type { UploadFile } from "antd";
 import type { Message as AppMessage } from "@/types";
 import CustomStreamdown from "@/components/CustomStreamdown";
+import ThinkBlock from "@/components/ThinkBlock";
 import { AgentLogAccordion } from "@/components/AgentLogCard";
 import { AgentLog } from "@/types";
 import { Button } from "antd";
@@ -454,6 +454,38 @@ export default function ChatPage() {
     setAttachments((prev) => prev.filter((f) => f.uid !== file.uid));
   };
 
+  // 处理think内容分离的函数
+  const processThinkContent = (fullContent: string) => {
+    const thinkStartRegex = /<think([\s\S]*?)>/i;
+    const thinkEndRegex = /<\/think>/i;
+
+    const hasThinkStart = thinkStartRegex.test(fullContent);
+    const hasThinkEnd = thinkEndRegex.test(fullContent);
+
+    let thinkContent = '';
+    let normalContent = fullContent;
+
+    if (hasThinkStart) {
+      // 如果有开始标签
+      const startIndex = fullContent.search(thinkStartRegex);
+      const endIndex = fullContent.search(thinkEndRegex);
+
+      if (hasThinkEnd && endIndex > startIndex) {
+        // 完整的think块 - 提取中间内容
+        thinkContent = fullContent.slice(startIndex + 7, endIndex).trim();
+        // 移除整个think块
+        normalContent = fullContent.slice(0, startIndex).trim() + ' ' + fullContent.slice(endIndex + 8).trim();
+      } else {
+        // 未闭合的think块 - 提取开始后的内容
+        thinkContent = fullContent.slice(startIndex + 7).trim();
+        // 移除开始标签
+        normalContent = fullContent.slice(0, startIndex).trim();
+      }
+    }
+
+    return { thinkContent: thinkContent || '', normalContent: normalContent.trim() };
+  };
+
   const handleSend = async (message: string) => {
     if (!message.trim() || isStreaming) return;
 
@@ -504,6 +536,8 @@ export default function ChatPage() {
         id: assistantMsgId,
         role: "assistant",
         content: "",
+        think_content: "",
+        think_should_collapse: false,
       },
     ]);
 
@@ -545,113 +579,147 @@ export default function ChatPage() {
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No response body");
 
-      const decoder = new TextDecoder();
+      const decoder = new TextDecoder('utf-8');
       let buffer = "";
       let assistantContent = "";
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      // Dify异步流式处理模式
+      let bufferObj: Record<string, any>;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
+      function read() {
+        let hasError = false;
+        reader?.read().then((result: any) => {
+          if (result.done) {
+            // 流结束了，但不立即重置状态，等待message_end事件
+            return;
+          }
 
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-
-          const payload = line.slice(6);
+          buffer += decoder.decode(result.value, { stream: true });
+          const lines = buffer.split('\n');
 
           try {
-            const data = JSON.parse(payload);
-
-            // Capture task_id
-            if (data.task_id && !currentTaskIdRef.current) {
-              currentTaskIdRef.current = data.task_id;
-            }
-
-            if (data.event === "message") {
-              assistantContent += data.answer;
-              setWorkflowStatus("");
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === assistantMsgId
-                    ? { ...msg, content: assistantContent }
-                    : msg
-                )
-              );
-            } else if (data.event === "message_end") {
-              if (data.conversation_id) {
-                setCurrentConvId(data.conversation_id);
-                loadConversations();
-                closeMobileSidebarIfNeeded();
-              }
-            } else if (data.event === "workflow_started") {
-              setWorkflowStatus("正在思考");
-            } else if (data.event === "node_started") {
-              setWorkflowStatus(data.data?.title || "正在思考");
-            } else if (data.event === "error") {
-              console.log('[SSE] error:', data.message);
-              const errorMessage = data.message || 'Unknown error';
-              // 显示错误在助手消息中
-              assistantContent += `⚠️ 错误：${errorMessage}`;
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === assistantMsgId
-                    ? { ...msg, content: assistantContent }
-                    : msg
-                )
-              );
-            } else if (data.event === "agent_log") {
-              // 只有当 label 以 "CALL " 开头时才创建 agent log
-              const isToolCall = data.data.label?.startsWith('CALL ');
-
-              if (isToolCall) {
-                // 将 agent log 关联到当前助手消息
-                const agentLog: AgentLog = {
-                  id: data.data.id, // 使用 agent log 自己的 id
-                  conversation_id: data.conversation_id,
-                  message_id: data.message_id,
-                  task_id: data.task_id,
-                  created_at: data.created_at,
-                  data: data.data
-                };
-
-                setMessages(prev => prev.map(msg =>
-                  msg.id === assistantMsgId
-                    ? {
-                        ...msg,
-                        agent_logs: [
-                          ...(msg.agent_logs || []).filter(log => log.id !== data.data.id), // 按 agent log 的 id 去重
-                          agentLog
-                        ]
-                      }
-                    : msg
-                ));
-              }
-
-              // 保留原有的 workflowStatus 处理逻辑
-              const queryMatch = payload.match(
-                /"query":("(?:(?:\\.)|[^"\\])*")/
-              );
-              if (!queryMatch?.[1]) {
-                continue; // Skip agent_log events that don't include a query field
-              }
-
-              try {
-                const extractedQuery = JSON.parse(queryMatch[1]).trim();
-                if (extractedQuery) {
-                  setWorkflowStatus(`正在检索：${extractedQuery}`);
+            lines.forEach((message) => {
+              if (message.startsWith('data: ')) {
+                try {
+                  bufferObj = JSON.parse(message.substring(6)) as Record<string, any>;
+                } catch (e) {
+                  // Skip malformed JSON
+                  return;
                 }
-              } catch (parseError) {
-                // Ignore malformed query payloads
+
+                // Capture task_id
+                if (bufferObj.task_id && !currentTaskIdRef.current) {
+                  currentTaskIdRef.current = bufferObj.task_id;
+                }
+
+                if (bufferObj.event === "message" || bufferObj.event === "agent_message") {
+                  assistantContent += bufferObj.answer || "";
+                  setWorkflowStatus("");
+
+                  // 实时处理think内容分离
+                  const { thinkContent, normalContent } = processThinkContent(assistantContent);
+
+                  
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === assistantMsgId
+                        ? {
+                            ...msg,
+                            content: normalContent,
+                            think_content: thinkContent || undefined,
+                            think_should_collapse: thinkContent.trim() && normalContent.trim() // thinking结束后需要折叠
+                          }
+                        : msg
+                    )
+                  );
+                } else if (bufferObj.event === "message_end") {
+                  if (bufferObj.conversation_id) {
+                    setCurrentConvId(bufferObj.conversation_id);
+                    loadConversations();
+                    closeMobileSidebarIfNeeded();
+                  }
+                  setIsStreaming(false);
+                  setWorkflowStatus("");
+                  currentTaskIdRef.current = null;
+                  abortControllerRef.current = null;
+                  return;
+                } else if (bufferObj.event === "workflow_started") {
+                  setWorkflowStatus("正在思考");
+                } else if (bufferObj.event === "node_started") {
+                  setWorkflowStatus(bufferObj.data?.title || "正在思考");
+                } else if (bufferObj.event === "error") {
+                  const errorMessage = bufferObj.message || 'Unknown error';
+                  assistantContent += `⚠️ 错误：${errorMessage}`;
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === assistantMsgId
+                        ? { ...msg, content: assistantContent }
+                        : msg
+                    )
+                  );
+                  hasError = true;
+                  return;
+                } else if (bufferObj.event === "agent_log") {
+                  const isToolCall = bufferObj.data.label?.startsWith('CALL ');
+
+                  if (isToolCall) {
+                    const agentLog: AgentLog = {
+                      id: bufferObj.data.id,
+                      conversation_id: bufferObj.conversation_id,
+                      message_id: bufferObj.message_id,
+                      task_id: bufferObj.task_id,
+                      created_at: bufferObj.created_at,
+                      data: bufferObj.data
+                    };
+
+                    setMessages(prev => prev.map(msg =>
+                      msg.id === assistantMsgId
+                        ? {
+                            ...msg,
+                            agent_logs: [
+                              ...(msg.agent_logs || []).filter(log => log.id !== bufferObj.data.id),
+                              agentLog
+                            ]
+                          }
+                        : msg
+                    ));
+                  }
+
+                  // 保留原有的 workflowStatus 处理逻辑
+                  const payload = message.substring(6);
+                  const queryMatch = payload.match(
+                    /"query":("(?:(?:\\.)|[^"\\])*")/
+                  );
+                  if (queryMatch?.[1]) {
+                    try {
+                      const extractedQuery = JSON.parse(queryMatch[1]).trim();
+                      if (extractedQuery) {
+                        setWorkflowStatus(`正在检索：${extractedQuery}`);
+                      }
+                    } catch (parseError) {
+                      // Ignore malformed query payloads
+                    }
+                  }
+                }
               }
-            }
+            });
+            buffer = lines[lines.length - 1];
           } catch (e) {
-            // Skip invalid JSON
+            hasError = true;
           }
-        }
+
+          if (!hasError) {
+            read();
+          } else {
+            // 如果有错误，也需要重置状态
+            setIsStreaming(false);
+            setWorkflowStatus("");
+            currentTaskIdRef.current = null;
+            abortControllerRef.current = null;
+          }
+        });
       }
+      read();
     } catch (error: unknown) {
       // Don't show error if aborted by user
       if (error instanceof Error && error.name === "AbortError") {
@@ -668,11 +736,13 @@ export default function ChatPage() {
         )
       );
     } finally {
-      setIsStreaming(false);
-      setWorkflowStatus("");
-      // 保留 agent logs 供查看，不清空
-      currentTaskIdRef.current = null;
-      abortControllerRef.current = null;
+      // 只有在仍然streaming时才重置状态（避免与异步递归中的重置冲突）
+      if (isStreaming) {
+        setIsStreaming(false);
+        setWorkflowStatus("");
+        currentTaskIdRef.current = null;
+        abortControllerRef.current = null;
+      }
     }
   };
 
@@ -906,13 +976,20 @@ export default function ChatPage() {
                             </div>
                           )}
 
+                          {/* Think Block 显示区域：在助手消息且有 think 内容时显示 */}
+                          {msg.role === "assistant" && msg.think_content && (
+                            <ThinkBlock content={msg.think_content} shouldCollapse={msg.think_should_collapse} />
+                          )}
+
                           {/* Agent Logs 显示区域：在助手消息且有 logs 时显示 */}
                           {msg.role === "assistant" && msg.agent_logs && msg.agent_logs.length > 0 && (
                             <AgentLogAccordion logs={msg.agent_logs} />
                           )}
 
                           <div className="markdown-body">
-                            <CustomStreamdown>{msg.content}</CustomStreamdown>
+                            <CustomStreamdown>
+                              {msg.content}
+                            </CustomStreamdown>
                           </div>
                         </div>
                       </div>
