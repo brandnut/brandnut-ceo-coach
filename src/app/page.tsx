@@ -627,7 +627,7 @@ export default function ChatPage() {
                             ...msg,
                             content: normalContent,
                             think_content: thinkContent || undefined,
-                            think_should_collapse: thinkContent.trim() && normalContent.trim() // thinking结束后需要折叠
+                            think_should_collapse: !!(thinkContent.trim() && normalContent.trim()) // thinking结束后需要折叠
                           }
                         : msg
                     )

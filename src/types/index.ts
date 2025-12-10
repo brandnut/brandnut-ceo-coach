@@ -12,6 +12,7 @@ export interface Message {
   role: 'user' | 'assistant'
   content: string
   think_content?: string
+  think_should_collapse?: boolean
   message_files?: MessageFile[]
   agent_logs?: AgentLog[]
 }
