@@ -662,7 +662,7 @@ export default function ChatPage() {
                 } else if (bufferObj.event === "agent_log") {
                   const isToolCall = bufferObj.data.label?.startsWith('CALL ');
 
-                  if (isToolCall) {
+                  if (isToolCall && bufferObj.data?.id) {
                     const agentLog: AgentLog = {
                       id: bufferObj.data.id,
                       conversation_id: bufferObj.conversation_id,
@@ -677,7 +677,7 @@ export default function ChatPage() {
                         ? {
                             ...msg,
                             agent_logs: [
-                              ...(msg.agent_logs || []).filter(log => log.id !== bufferObj.data.id),
+                              ...(msg.agent_logs || []).filter(log => log.id !== bufferObj.data?.id),
                               agentLog
                             ]
                           }
