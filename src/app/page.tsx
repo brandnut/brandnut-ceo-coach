@@ -585,6 +585,7 @@ export default function ChatPage() {
 
       // Dify异步流式处理模式
       let bufferObj: Record<string, any>;
+      const MIN_CHUNK_SIZE = 64; // 累积阈值，减少碎片化处理
 
       function read() {
         let hasError = false;
@@ -595,17 +596,20 @@ export default function ChatPage() {
           }
 
           buffer += decoder.decode(result.value, { stream: true });
-          const lines = buffer.split('\n');
 
-          try {
-            lines.forEach((message) => {
-              if (message.startsWith('data: ')) {
-                try {
-                  bufferObj = JSON.parse(message.substring(6)) as Record<string, any>;
-                } catch (e) {
-                  // Skip malformed JSON
-                  return;
-                }
+          // 累积到阈值再处理，避免碎片化导致的频繁JSON解析
+          if (buffer.length >= MIN_CHUNK_SIZE || buffer.includes('\n\n')) {
+            const lines = buffer.split('\n');
+
+            try {
+              lines.forEach((message) => {
+                if (message.startsWith('data: ')) {
+                  try {
+                    bufferObj = JSON.parse(message.substring(6)) as Record<string, any>;
+                  } catch (e) {
+                    // Skip malformed JSON
+                    return;
+                  }
 
                 // Capture task_id
                 if (bufferObj.task_id && !currentTaskIdRef.current) {
@@ -702,15 +706,22 @@ export default function ChatPage() {
                   }
                 }
               }
-            });
-            buffer = lines[lines.length - 1];
-          } catch (e) {
-            hasError = true;
-          }
+                });
+                buffer = lines[lines.length - 1];
+              } catch (e) {
+                hasError = true;
+              }
+            } else {
+              // Buffer未达到阈值，继续读取
+              if (!hasError) {
+                read();
+                return;
+              }
+            }
 
-          if (!hasError) {
-            read();
-          } else {
+            if (!hasError) {
+              read();
+            } else {
             // 如果有错误，也需要重置状态
             setIsStreaming(false);
             setWorkflowStatus("");
