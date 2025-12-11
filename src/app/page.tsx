@@ -290,10 +290,15 @@ export default function ChatPage() {
           });
         }
         if (msg.answer) {
+          // 解析历史消息中的 thinking blocks
+          const { thinkContent, normalContent } = processThinkContent(msg.answer);
+
           history.push({
             id: msg.id,
             role: "assistant",
-            content: msg.answer,
+            content: normalContent,
+            think_content: thinkContent || undefined,
+            think_should_collapse: !!(thinkContent.trim() && normalContent.trim()),
             message_files: assistantFiles,
           });
         }
