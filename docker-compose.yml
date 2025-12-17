@@ -2,22 +2,23 @@ version: "3.8"
 
 services:
   app:
-    image: ghcr.io/brandnut/brandnut-ceo-coach:saas
+    image: ghcr.io/brandnut/brandnut-ceo-coach:saas-24d9bbc
     container_name: brandnut-ceo-coach
     ports:
       - "3005:3000"
     restart: unless-stopped
     environment:
       # All environment variables are embedded in the image during build
-      - DATABASE_URL
-      - DIFY_API_KEY
-      - DIFY_API_URL
-      - GUEST_MODE_ENABLED
-      - NEXTAUTH_SECRET
-      - NEXTAUTH_URL
-      - NEXT_PUBLIC_BASE_PATH
-      - REDIS_URL
-      - SECRET_KEY
+      DATABASE_URL:
+      DIFY_API_KEY:
+      DIFY_API_URL:
+      GUEST_MODE_ENABLED:
+      NEXTAUTH_SECRET:
+      NEXTAUTH_URL:
+      NEXT_PUBLIC_BASE_PATH:
+      REDIS_URL:
+      SECRET_KEY:
+      HOSTNAME: "::"  # Bind Next.js to both IPv4/IPv6
     networks:
       - brandnut-net
     healthcheck:
@@ -30,3 +31,4 @@ services:
 networks:
   brandnut-net:
     external: true
+
