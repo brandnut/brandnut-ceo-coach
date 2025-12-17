@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         inputs,
         query,
-        user: session.user.name,
+        user: session.user?.name || "guest",
         conversation_id: conversationId,
         files,
         response_mode: 'streaming',

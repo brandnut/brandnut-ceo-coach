@@ -1,19 +1,50 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Form, Input, Button, Card, Typography, Alert, message, Layout } from 'antd'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import Breadcrumbs from '@/components/layout/Breadcrumbs'
+import { FeishuSwitch } from '@/components/ai-elements/FeishuSwitch'
 import { useSession } from 'next-auth/react'
+import { useSearchParams } from 'next/navigation'
 
 const { Title } = Typography
 const { Content } = Layout
 
 function ProfileContent() {
   const { data: session } = useSession()
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [form] = Form.useForm()
+  
+  // 处理飞书授权相关的URL参数
+  useEffect(() => {
+    const feishuAuthorized = searchParams.get('feishu_authorized')
+    const error = searchParams.get('error')
+    
+    if (feishuAuthorized === 'true') {
+      message.success('飞书账号授权成功！')
+      // 清除URL参数
+      window.history.replaceState({}, '', '/profile')
+    } else if (error) {
+      const errorMessages: Record<string, string> = {
+        'feishu_auth_failed': '飞书授权失败，请重试',
+        'invalid_callback': '授权回调参数无效',
+        'invalid_state': '安全验证失败，请重新授权',
+        'not_authenticated': '请先登录',
+        'app_not_configured': '飞书应用未配置',
+        'token_exchange_failed': '授权码交换失败',
+        'feishu_api_error': '飞书API错误',
+        'token_storage_failed': '授权信息保存失败',
+        'callback_failed': '授权回调处理失败',
+      }
+      
+      message.error(errorMessages[error] || '授权过程中发生错误')
+      // 清除URL参数
+      window.history.replaceState({}, '', '/profile')
+    }
+  }, [searchParams])
 
   const handlePasswordChange = async (values: any) => {
     setLoading(true)
@@ -57,11 +88,15 @@ function ProfileContent() {
 
             <div className="mb-6">
               <Alert
-                message={`当前用户：${session.user.name}`}
+                message={`当前用户：${session.user?.name || 'guest'}`}
                 type="info"
                 showIcon
                 icon={<UserOutlined />}
               />
+            </div>
+
+            <div className="mb-6">
+              <FeishuSwitch />
             </div>
 
             <Form

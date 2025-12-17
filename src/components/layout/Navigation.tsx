@@ -80,8 +80,8 @@ export default function Navigation() {
         >
           <div className="user-avatar-container">
             <Avatar size="small" icon={<UserOutlined />} />
-            <span className="user-name">{session.user.name}</span>
-            {session.user.role === "admin" && (
+            <span className="user-name">{session.user?.name || 'guest'}</span>
+            {session.user?.role === "admin" && (
               <span className="admin-badge">管理员</span>
             )}
           </div>

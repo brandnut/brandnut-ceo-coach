@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          user: session.user.name,
+          user: session.user?.name || "guest",
         }),
       }
     )

@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     const limit = searchParams.get('limit') || '20'
 
     const params = new URLSearchParams({
-      user: session.user.name,
+      user: session.user?.name || 'guest',
       limit,
     })
     if (lastId) {

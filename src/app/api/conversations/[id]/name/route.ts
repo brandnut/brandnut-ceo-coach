@@ -22,7 +22,7 @@ export async function POST(req: NextRequest, context: any) {
         },
         body: JSON.stringify({
           name,
-          user: session.user.name,
+          user: session.user?.name || "guest",
         }),
       }
     )

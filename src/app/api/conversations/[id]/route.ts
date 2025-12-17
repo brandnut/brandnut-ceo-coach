@@ -13,7 +13,7 @@ export async function DELETE(req: NextRequest, context: any) {
 
     // First, verify that this conversation belongs to the user
     const listResponse = await fetch(
-      `${process.env.DIFY_API_URL}/conversations?user=${session.user.name}`,
+      `${process.env.DIFY_API_URL}/conversations?user=${session.user?.name || 'guest'}`,
       {
         headers: {
           Authorization: `Bearer ${process.env.DIFY_API_KEY}`,
@@ -49,7 +49,7 @@ export async function DELETE(req: NextRequest, context: any) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          user: session.user.name,
+          user: session.user?.name || 'guest',
         }),
       }
     )

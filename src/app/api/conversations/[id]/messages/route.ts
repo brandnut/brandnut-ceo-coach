@@ -12,7 +12,7 @@ export async function GET(req: NextRequest, context: any) {
     const { id } = await (context as { params: { id: string } } | { params: Promise<{ id: string }> }).params
 
     const response = await fetch(
-      `${process.env.DIFY_API_URL}/messages?conversation_id=${id}&user=${session.user.name}&limit=100`,
+      `${process.env.DIFY_API_URL}/messages?conversation_id=${id}&user=${session.user?.name || "guest"}&limit=100`,
       {
         headers: {
           Authorization: `Bearer ${process.env.DIFY_API_KEY}`,
