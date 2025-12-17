@@ -56,7 +56,13 @@
       "Bash(gh repo view:*)",
       "Bash(BASE_PATH=/ceo-coach-demo npm run dev:*)",
       "Bash(tmutil listlocalsnapshotsfordate:*)",
-      "Bash(docker system:*)"
+      "Bash(docker system:*)",
+      "Bash(kill:*)",
+      "mcp__web-search-prime__webSearchPrime",
+      "mcp__web-reader__webReader",
+      "Bash(PORT=3000 npm run dev:*)",
+      "mcp__lark-mcp__im_v1_message_create",
+      "mcp__lark-mcp__contact_v3_user_batchGetId"
     ],
     "deny": [],
     "ask": []

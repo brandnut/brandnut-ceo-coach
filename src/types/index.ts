@@ -1,8 +1,20 @@
+export interface AgentLog {
+  id: string;
+  conversation_id: string;
+  message_id: string;
+  task_id: string;
+  created_at: number;
+  data: any;
+}
+
 export interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
+  think_content?: string
+  think_should_collapse?: boolean
   message_files?: MessageFile[]
+  agent_logs?: AgentLog[]
 }
 
 export interface Conversation {

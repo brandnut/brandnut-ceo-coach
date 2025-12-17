@@ -6,12 +6,16 @@ import { createPortal } from "react-dom";
 
 interface CustomStreamdownProps {
   children: string;
+  className?: string;
 }
 
-export default function CustomStreamdown({ children }: CustomStreamdownProps) {
+export default function CustomStreamdown({ children, className }: CustomStreamdownProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [svgContent, setSvgContent] = useState("");
+
+  // 在渲染前过滤掉
+  const cleanContent = children.replace(/<\/?think[^>]*>/gi, '').trim();
 
   useEffect(() => {
     const container = containerRef.current;
@@ -282,12 +286,12 @@ export default function CustomStreamdown({ children }: CustomStreamdownProps) {
     });
 
     return () => observer.disconnect();
-  }, [children]);
+  }, [cleanContent]);
 
   return (
     <>
-      <div ref={containerRef}>
-        <Streamdown controls={true}>{children}</Streamdown>
+      <div ref={containerRef} className={className}>
+        <Streamdown controls={true}>{cleanContent}</Streamdown>
       </div>
 
       {modalOpen &&

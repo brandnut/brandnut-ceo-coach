@@ -15,15 +15,14 @@ import {
 } from "@ant-design/icons";
 import TutorialModal from "@/components/TutorialModal";
 import Navigation from "@/components/layout/Navigation";
+import { sendMessage } from "@/lib/api";
 import { getApiUrl, getAuthHeaders } from "@/lib/utils";
-import FillInDialog from "@/components/FillInDialog";
 import MenuBar, { type MenuBarRef } from "@/components/layout/MenuBar";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import FeatureUnavailable from "@/components/FeatureUnavailable";
 import type { UploadFile } from "antd";
 import type { Message as AppMessage } from "@/types";
 import CustomStreamdown from "@/components/CustomStreamdown";
-import ThinkBlock from "@/components/ThinkBlock";
 import { AgentLogAccordion } from "@/components/AgentLogCard";
 import { AgentLog } from "@/types";
 import { Button } from "antd";
@@ -34,7 +33,6 @@ import type { AttachmentFile } from "@/types";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {
   welcomeQuestions,
-  wpgWelcomeQuestions,
   welcomeText,
   difyInputs,
   guestMode,
@@ -116,18 +114,12 @@ export default function ChatPage() {
   const router = useRouter();
   const menuBarRef = useRef<MenuBarRef>(null);
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const isTablet = useMediaQuery("(min-width: 769px) and (max-width: 1024px)");
 
   // 从组织列表中获取聊天配置
   const chatConfig = organizations?.find((org) => org.chatConfig)?.chatConfig;
 
   // 检查用户是否是管理员
-  const isAdmin = me?.roles?.some((role) => role.role_name === "管理员");
-
-  // 检查是否是 WPG 组织 (org id = 3f982d7d-1057-4fdc-9ed5-3d33d4c28a84)
-  const isWPGOrganization = organizations?.some(
-    (org) => org.id === "3f982d7d-1057-4fdc-9ed5-3d33d4c28a84"
-  );
+  const isAdmin = me?.roles?.some(role => role.role_name === '管理员');
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConvId, setCurrentConvId] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -143,10 +135,6 @@ export default function ChatPage() {
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [fillInDialog, setFillInDialog] = useState<{
-    visible: boolean;
-    question: string;
-  }>({ visible: false, question: "" });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -247,23 +235,6 @@ export default function ChatPage() {
     }
   };
 
-  const handleQuestionClick = (question: string) => {
-    if (question.includes("...")) {
-      setFillInDialog({ visible: true, question });
-    } else {
-      setInput(question);
-    }
-  };
-
-  const handleFillInComplete = (filledQuestion: string) => {
-    setInput(filledQuestion);
-    setFillInDialog({ visible: false, question: "" });
-  };
-
-  const handleFillInCancel = () => {
-    setFillInDialog({ visible: false, question: "" });
-  };
-
   const startNewConversation = () => {
     setCurrentConvId(null);
     setMessages([]);
@@ -292,12 +263,9 @@ export default function ChatPage() {
         "Content-Type": "application/json",
       };
 
-      const response = await fetch(
-        getApiUrl(`/api/conversations/${convId}/messages`),
-        {
-          headers,
-        }
-      );
+      const response = await fetch(getApiUrl(`/api/conversations/${convId}/messages`), {
+        headers,
+      });
       if (!response.ok) {
         setMessages([]);
         return;
@@ -322,19 +290,10 @@ export default function ChatPage() {
           });
         }
         if (msg.answer) {
-          // 解析历史消息中的 thinking blocks
-          const { thinkContent, normalContent } = processThinkContent(
-            msg.answer
-          );
-
           history.push({
             id: msg.id,
             role: "assistant",
-            content: normalContent,
-            think_content: thinkContent || undefined,
-            think_should_collapse: !!(
-              thinkContent.trim() && normalContent.trim()
-            ),
+            content: msg.answer,
             message_files: assistantFiles,
           });
         }
@@ -495,44 +454,6 @@ export default function ChatPage() {
     setAttachments((prev) => prev.filter((f) => f.uid !== file.uid));
   };
 
-  // 处理think内容分离的函数
-  const processThinkContent = (fullContent: string) => {
-    const thinkStartRegex = /<think([\s\S]*?)>/i;
-    const thinkEndRegex = /<\/think>/i;
-
-    const hasThinkStart = thinkStartRegex.test(fullContent);
-    const hasThinkEnd = thinkEndRegex.test(fullContent);
-
-    let thinkContent = "";
-    let normalContent = fullContent;
-
-    if (hasThinkStart) {
-      // 如果有开始标签
-      const startIndex = fullContent.search(thinkStartRegex);
-      const endIndex = fullContent.search(thinkEndRegex);
-
-      if (hasThinkEnd && endIndex > startIndex) {
-        // 完整的think块 - 提取中间内容
-        thinkContent = fullContent.slice(startIndex + 7, endIndex).trim();
-        // 移除整个think块
-        normalContent =
-          fullContent.slice(0, startIndex).trim() +
-          " " +
-          fullContent.slice(endIndex + 8).trim();
-      } else {
-        // 未闭合的think块 - 提取开始后的内容
-        thinkContent = fullContent.slice(startIndex + 7).trim();
-        // 移除开始标签
-        normalContent = fullContent.slice(0, startIndex).trim();
-      }
-    }
-
-    return {
-      thinkContent: thinkContent || "",
-      normalContent: normalContent.trim(),
-    };
-  };
-
   const handleSend = async (message: string) => {
     if (!message.trim() || isStreaming) return;
 
@@ -583,8 +504,6 @@ export default function ChatPage() {
         id: assistantMsgId,
         role: "assistant",
         content: "",
-        think_content: "",
-        think_should_collapse: false,
       },
     ]);
 
@@ -626,171 +545,113 @@ export default function ChatPage() {
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No response body");
 
-      const decoder = new TextDecoder("utf-8");
+      const decoder = new TextDecoder();
       let buffer = "";
       let assistantContent = "";
 
-      // Dify异步流式处理模式
-      let bufferObj: Record<string, any>;
-      const MIN_CHUNK_SIZE = 64; // 累积阈值，减少碎片化处理
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      function read() {
-        let hasError = false;
-        reader?.read().then((result: any) => {
-          if (result.done) {
-            // 流结束了，但不立即重置状态，等待message_end事件
-            return;
-          }
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
 
-          buffer += decoder.decode(result.value, { stream: true });
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
 
-          // 累积到阈值再处理，避免碎片化导致的频繁JSON解析
-          if (buffer.length >= MIN_CHUNK_SIZE || buffer.includes("\n\n")) {
-            const lines = buffer.split("\n");
+          const payload = line.slice(6);
 
-            try {
-              lines.forEach((message) => {
-                if (message.startsWith("data: ")) {
-                  try {
-                    bufferObj = JSON.parse(message.substring(6)) as Record<
-                      string,
-                      any
-                    >;
-                  } catch (e) {
-                    // Skip malformed JSON
-                    return;
-                  }
+          try {
+            const data = JSON.parse(payload);
 
-                  // Capture task_id
-                  if (bufferObj.task_id && !currentTaskIdRef.current) {
-                    currentTaskIdRef.current = bufferObj.task_id;
-                  }
+            // Capture task_id
+            if (data.task_id && !currentTaskIdRef.current) {
+              currentTaskIdRef.current = data.task_id;
+            }
 
-                  if (
-                    bufferObj.event === "message" ||
-                    bufferObj.event === "agent_message"
-                  ) {
-                    assistantContent += bufferObj.answer || "";
-                    setWorkflowStatus("");
+            if (data.event === "message") {
+              assistantContent += data.answer;
+              setWorkflowStatus("");
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMsgId
+                    ? { ...msg, content: assistantContent }
+                    : msg
+                )
+              );
+            } else if (data.event === "message_end") {
+              if (data.conversation_id) {
+                setCurrentConvId(data.conversation_id);
+                loadConversations();
+                closeMobileSidebarIfNeeded();
+              }
+            } else if (data.event === "workflow_started") {
+              setWorkflowStatus("正在思考");
+            } else if (data.event === "node_started") {
+              setWorkflowStatus(data.data?.title || "正在思考");
+            } else if (data.event === "error") {
+              console.log('[SSE] error:', data.message);
+              const errorMessage = data.message || 'Unknown error';
+              // 显示错误在助手消息中
+              assistantContent += `⚠️ 错误：${errorMessage}`;
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMsgId
+                    ? { ...msg, content: assistantContent }
+                    : msg
+                )
+              );
+            } else if (data.event === "agent_log") {
+              // 只有当 label 以 "CALL " 开头时才创建 agent log
+              const isToolCall = data.data.label?.startsWith('CALL ');
 
-                    // 实时处理think内容分离
-                    const { thinkContent, normalContent } =
-                      processThinkContent(assistantContent);
+              if (isToolCall) {
+                // 将 agent log 关联到当前助手消息
+                const agentLog: AgentLog = {
+                  id: data.data.id, // 使用 agent log 自己的 id
+                  conversation_id: data.conversation_id,
+                  message_id: data.message_id,
+                  task_id: data.task_id,
+                  created_at: data.created_at,
+                  data: data.data
+                };
 
-                    setMessages((prev) =>
-                      prev.map((msg) =>
-                        msg.id === assistantMsgId
-                          ? {
-                              ...msg,
-                              content: normalContent,
-                              think_content: thinkContent || undefined,
-                              think_should_collapse: !!(
-                                thinkContent.trim() && normalContent.trim()
-                              ), // thinking结束后需要折叠
-                            }
-                          : msg
-                      )
-                    );
-                  } else if (bufferObj.event === "message_end") {
-                    if (bufferObj.conversation_id) {
-                      setCurrentConvId(bufferObj.conversation_id);
-                      loadConversations();
-                      closeMobileSidebarIfNeeded();
-                    }
-                    setIsStreaming(false);
-                    setWorkflowStatus("");
-                    currentTaskIdRef.current = null;
-                    abortControllerRef.current = null;
-                    return;
-                  } else if (bufferObj.event === "workflow_started") {
-                    setWorkflowStatus("正在思考");
-                  } else if (bufferObj.event === "node_started") {
-                    setWorkflowStatus(bufferObj.data?.title || "正在思考");
-                  } else if (bufferObj.event === "error") {
-                    const errorMessage = bufferObj.message || "Unknown error";
-                    assistantContent += `⚠️ 错误：${errorMessage}`;
-                    setMessages((prev) =>
-                      prev.map((msg) =>
-                        msg.id === assistantMsgId
-                          ? { ...msg, content: assistantContent }
-                          : msg
-                      )
-                    );
-                    hasError = true;
-                    return;
-                  } else if (bufferObj.event === "agent_log") {
-                    const isToolCall =
-                      bufferObj.data.label?.startsWith("CALL ");
-
-                    if (isToolCall && bufferObj.data?.id) {
-                      const agentLog: AgentLog = {
-                        id: bufferObj.data.id,
-                        conversation_id: bufferObj.conversation_id,
-                        message_id: bufferObj.message_id,
-                        task_id: bufferObj.task_id,
-                        created_at: bufferObj.created_at,
-                        data: bufferObj.data,
-                      };
-
-                      setMessages((prev) =>
-                        prev.map((msg) =>
-                          msg.id === assistantMsgId
-                            ? {
-                                ...msg,
-                                agent_logs: [
-                                  ...(msg.agent_logs || []).filter(
-                                    (log) => log.id !== bufferObj.data?.id
-                                  ),
-                                  agentLog,
-                                ],
-                              }
-                            : msg
-                        )
-                      );
-                    }
-
-                    // 保留原有的 workflowStatus 处理逻辑
-                    const payload = message.substring(6);
-                    const queryMatch = payload.match(
-                      /"query":("(?:(?:\\.)|[^"\\])*")/
-                    );
-                    if (queryMatch?.[1]) {
-                      try {
-                        const extractedQuery = JSON.parse(queryMatch[1]).trim();
-                        if (extractedQuery) {
-                          setWorkflowStatus(`正在检索：${extractedQuery}`);
-                        }
-                      } catch (parseError) {
-                        // Ignore malformed query payloads
+                setMessages(prev => prev.map(msg =>
+                  msg.id === assistantMsgId
+                    ? {
+                        ...msg,
+                        agent_logs: [
+                          ...(msg.agent_logs || []).filter(log => log.id !== data.data.id), // 按 agent log 的 id 去重
+                          agentLog
+                        ]
                       }
-                    }
-                  }
-                }
-              });
-              buffer = lines[lines.length - 1];
-            } catch (e) {
-              hasError = true;
-            }
-          } else {
-            // Buffer未达到阈值，继续读取
-            if (!hasError) {
-              read();
-              return;
-            }
-          }
+                    : msg
+                ));
+              }
 
-          if (!hasError) {
-            read();
-          } else {
-            // 如果有错误，也需要重置状态
-            setIsStreaming(false);
-            setWorkflowStatus("");
-            currentTaskIdRef.current = null;
-            abortControllerRef.current = null;
+              // 保留原有的 workflowStatus 处理逻辑
+              const queryMatch = payload.match(
+                /"query":("(?:(?:\\.)|[^"\\])*")/
+              );
+              if (!queryMatch?.[1]) {
+                continue; // Skip agent_log events that don't include a query field
+              }
+
+              try {
+                const extractedQuery = JSON.parse(queryMatch[1]).trim();
+                if (extractedQuery) {
+                  setWorkflowStatus(`正在检索：${extractedQuery}`);
+                }
+              } catch (parseError) {
+                // Ignore malformed query payloads
+              }
+            }
+          } catch (e) {
+            // Skip invalid JSON
           }
-        });
+        }
       }
-      read();
     } catch (error: unknown) {
       // Don't show error if aborted by user
       if (error instanceof Error && error.name === "AbortError") {
@@ -807,13 +668,11 @@ export default function ChatPage() {
         )
       );
     } finally {
-      // 只有在仍然streaming时才重置状态（避免与异步递归中的重置冲突）
-      if (isStreaming) {
-        setIsStreaming(false);
-        setWorkflowStatus("");
-        currentTaskIdRef.current = null;
-        abortControllerRef.current = null;
-      }
+      setIsStreaming(false);
+      setWorkflowStatus("");
+      // 保留 agent logs 供查看，不清空
+      currentTaskIdRef.current = null;
+      abortControllerRef.current = null;
     }
   };
 
@@ -932,10 +791,7 @@ export default function ChatPage() {
                   <span className="text-base font-medium">加载对话中...</span>
                 </div>
               ) : messages.length === 0 ? (
-                <div
-                  className="flex flex-col items-center justify-center h-full gap-6 text-muted-foreground"
-                  style={{ paddingTop: "46rem" }}
-                >
+                <div className="flex flex-col items-center justify-center h-full gap-6 text-muted-foreground">
                   <span className="text-4xl">{welcomeText.greeting}</span>
                   <span className="text-base font-medium">
                     {welcomeText.startNewConversation}
@@ -980,44 +836,7 @@ export default function ChatPage() {
                       )}
                     </span>
                   )}
-                  {isWPGOrganization ? (
-                    <div className="flex flex-col gap-6 w-full max-w-6xl">
-                      <p className="text-lg font-medium text-center">
-                        {welcomeText.suggestedQuestionsTitle}
-                      </p>
-                      <div className="space-y-6">
-                        {Object.entries(wpgWelcomeQuestions).map(
-                          ([category, questions]) => (
-                            <div key={category} className="space-y-3">
-                              <h3 className="text-base font-semibold text-foreground/90 mb-3">
-                                {category}
-                              </h3>
-                              <div className="overflow-x-auto">
-                                <div
-                                  className="flex gap-3 pb-2"
-                                  style={{
-                                    minWidth: "max-content",
-                                  }}
-                                >
-                                  {questions.map((question, index) => (
-                                    <div
-                                      key={`${category}-${index}`}
-                                      className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors min-w-[200px] max-w-[200px] flex-shrink-0 flex items-center justify-center text-center"
-                                      onClick={() => handleQuestionClick(question)}
-                                    >
-                                      <span className="text-xs leading-relaxed">
-                                        {question}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  ) : welcomeQuestions.length > 0 ? (
+                  {welcomeQuestions.length > 0 && (
                     <div className="flex flex-col gap-2 w-full max-w-md">
                       <p className="text-sm text-center">
                         {welcomeText.suggestedQuestionsTitle}
@@ -1027,14 +846,14 @@ export default function ChatPage() {
                           <div
                             key={index}
                             className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors"
-                            onClick={() => handleQuestionClick(question)}
+                            onClick={() => setInput(question)}
                           >
                             {question}
                           </div>
                         ))}
                       </div>
                     </div>
-                  ) : null}
+                  )}
                   <div className="flex justify-center">
                     <button
                       type="button"
@@ -1087,20 +906,10 @@ export default function ChatPage() {
                             </div>
                           )}
 
-                          {/* Think Block 显示区域：在助手消息且有 think 内容时显示 */}
-                          {msg.role === "assistant" && msg.think_content && (
-                            <ThinkBlock
-                              content={msg.think_content}
-                              shouldCollapse={msg.think_should_collapse}
-                            />
-                          )}
-
                           {/* Agent Logs 显示区域：在助手消息且有 logs 时显示 */}
-                          {msg.role === "assistant" &&
-                            msg.agent_logs &&
-                            msg.agent_logs.length > 0 && (
-                              <AgentLogAccordion logs={msg.agent_logs} />
-                            )}
+                          {msg.role === "assistant" && msg.agent_logs && msg.agent_logs.length > 0 && (
+                            <AgentLogAccordion logs={msg.agent_logs} />
+                          )}
 
                           <div className="markdown-body">
                             <CustomStreamdown>{msg.content}</CustomStreamdown>
@@ -1269,10 +1078,7 @@ export default function ChatPage() {
                         xhr.open("POST", getApiUrl("/api/files/upload"));
 
                         // Add Authorization header
-                        const authHeaders = getAuthHeaders(
-                          storage,
-                          storageKeys
-                        );
+                        const authHeaders = getAuthHeaders(storage, storageKeys);
                         Object.entries(authHeaders).forEach(([key, value]) => {
                           xhr.setRequestHeader(key, value);
                         });
@@ -1353,22 +1159,16 @@ export default function ChatPage() {
             open={isHelpOpen}
             onClose={() => setIsHelpOpen(false)}
           />
-          <FillInDialog
-            visible={fillInDialog.visible}
-            question={fillInDialog.question}
-            onComplete={handleFillInComplete}
-            onCancel={handleFillInCancel}
-          />
         </div>
       ) : (
         <FeatureUnavailable
           onBack={() => (window.location.href = "/login")}
           type={
             !organizations || organizations.length === 0
-              ? "no_organization"
+              ? 'no_organization'
               : chatConfig
-              ? "no_permission"
-              : "no_feature"
+                ? 'no_permission'
+                : 'no_feature'
           }
         />
       )}
