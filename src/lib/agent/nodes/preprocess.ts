@@ -20,28 +20,32 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
     timestamp: Date.now(),
   }
 
+  // Only process on first call (when messages don't start with system message)
+  // Skip on subsequent calls in tool loops
+  const firstMsgType = state.messages[0]?._getType()
+  if (firstMsgType === 'system') {
+    console.log('[Preprocess] Skipping (already processed)')
+    return {}
+  }
+
+  const messages: Array<SystemMessage | HumanMessage> = []
+
   // 2. Inject system prompt with timestamp if provided
-  const messages = [...state.messages]
-  if (state.systemPrompt && messages.length > 0) {
-    // Check if first message is already a system message
-    const hasSystemMessage = messages[0]?.constructor.name === 'SystemMessage'
+  if (state.systemPrompt) {
+    // Add current timestamp to system prompt
+    const now = new Date()
+    const timestamp = now.toISOString().replace('T', ' ').substring(0, 19)
+    const promptWithTimestamp = `当前日期时间: ${timestamp}\n\n${state.systemPrompt}`
 
-    if (!hasSystemMessage) {
-      // Add current timestamp to system prompt
-      const now = new Date()
-      const timestamp = now.toISOString().replace('T', ' ').substring(0, 19)
-      const promptWithTimestamp = `当前日期时间: ${timestamp}\n\n${state.systemPrompt}`
-
-      messages.unshift(new SystemMessage(promptWithTimestamp))
-      console.log('[Preprocess] Injected system prompt with timestamp:', timestamp)
-    }
+    messages.push(new SystemMessage(promptWithTimestamp))
+    console.log('[Preprocess] Injected system prompt with timestamp:', timestamp)
   }
 
   // 3. Memory lookup (pre-LLM) - inject into HumanMessage
   let memoryContext = ''
-  if (state.userId && state.conversationId) {
+  if (state.userId && state.conversationId && state.messages.length > 0) {
     // Get the last user message as query
-    const lastMessage = messages[messages.length - 1]
+    const lastMessage = state.messages[state.messages.length - 1]
     if (lastMessage && lastMessage.constructor.name === 'HumanMessage') {
       const query = typeof lastMessage.content === 'string' ? lastMessage.content : ''
 
@@ -54,25 +58,33 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
           if (memoryContext) {
             // Insert memory context directly into the HumanMessage content
             const augmentedContent = `${memoryContext}\n---\n\n ${query}`
-            messages[messages.length - 1] = new HumanMessage(augmentedContent)
+            messages.push(new HumanMessage(augmentedContent))
 
             console.log('[Preprocess] Injected memory context into HumanMessage:', {
               memories: memoryData.memory_detail_list.length,
               preferences: memoryData.preference_detail_list.length,
             })
+          } else {
+            // No memory context, add original human message
+            messages.push(lastMessage as HumanMessage)
           }
+        } else {
+          // No memory data, add original human message
+          messages.push(lastMessage as HumanMessage)
         }
+      } else {
+        // Empty query, add original human message
+        messages.push(lastMessage as HumanMessage)
       }
     }
   }
 
-  // 4. Future: rate limiting, input validation, etc.
-
+  // 4. Return new messages (will replace original messages)
   return {
     messages,
     requestMetadata: {
       ...requestMetadata,
-      memoryContext, // Store for logging purposes
+      memoryContext,
     },
   }
 }

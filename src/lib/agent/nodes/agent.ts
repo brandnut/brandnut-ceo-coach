@@ -153,8 +153,8 @@ export async function agentNode(state: AgentState): Promise<Partial<AgentState>>
     })
   }
 
-  // Append AI response to messages
+  // Return AI response (LangGraph will append it)
   return {
-    messages: [...state.messages, response],
+    messages: [response],
   }
 }

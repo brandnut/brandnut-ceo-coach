@@ -24,7 +24,13 @@ export interface AgentState {
 
 export const agentStateAnnotation = Annotation.Root({
   messages: Annotation<BaseMessage[]>({
-    reducer: (_, y) => y,
+    // Special reducer: replace if new messages start with system message (from preprocess), otherwise append
+    reducer: (x, y) => {
+      if (y.length > 0 && y[0]._getType() === 'system') {
+        return y // Replace (preprocess is setting up initial messages)
+      }
+      return x.concat(y) // Append (agent and tools adding new messages)
+    },
     default: () => [],
   }),
   userId: Annotation<string>(),

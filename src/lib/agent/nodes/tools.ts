@@ -173,8 +173,8 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
     })
   )
 
-  // 将所有 ToolMessage 追加到 messages
+  // Return tool messages (LangGraph will append them)
   return {
-    messages: [...state.messages, ...toolMessages],
+    messages: toolMessages,
   }
 }
