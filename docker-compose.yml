@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/brandnut/brandnut-ceo-coach:saas-24d9bbc
+    image: ghcr.io/brandnut/brandnut-ceo-coach:latest
     container_name: brandnut-ceo-coach
     ports:
       - "3005:3000"

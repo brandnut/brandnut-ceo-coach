@@ -39,6 +39,7 @@ jobs:
             type=ref,event=branch
             type=ref,event=pr
             type=sha,prefix={{branch}}-
+            type=raw,value=latest
             type=raw,value=saas
 
       - name: Set up Docker Buildx
