@@ -45,7 +45,16 @@ export async function POST(
       )
     }
 
-    // 3. Get conversation messages (first 6 messages, ~3 turns, enough for title)
+    // 3. Skip if conversation already has a title
+    if (conversation.title) {
+      return NextResponse.json({
+        success: true,
+        title: conversation.title,
+        skipped: true,
+      })
+    }
+
+    // 4. Get conversation messages (first 6 messages, ~3 turns, enough for title)
     const messages = await getConversationMessages(conversationId, 6)
 
     if (messages.length === 0) {

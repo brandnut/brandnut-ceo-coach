@@ -341,6 +341,35 @@ export default function ChatPage() {
     setAttachments((prev) => prev.filter((f) => f.uid !== file.uid));
   };
 
+  // Helper: Auto-generate title if needed (called after message completes)
+  const tryGenerateTitle = async (conversationId: string) => {
+    try {
+      const headers = {
+        ...getAuthHeaders(storage, storageKeys),
+        "Content-Type": "application/json",
+      };
+      const response = await fetch(
+        getApiUrl(`/api/agent/conversations/${conversationId}/generate-title`),
+        {
+          method: "POST",
+          headers,
+        }
+      );
+      if (response.ok) {
+        const { title } = await response.json();
+        // Update conversation in local state
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === conversationId ? { ...c, title } : c
+          )
+        );
+      }
+    } catch (error) {
+      // Silently fail - title generation is non-critical
+      console.error("Failed to generate title:", error);
+    }
+  };
+
   const handleSend = async (message: string) => {
     if (!message.trim() || isStreaming) return;
 
@@ -474,40 +503,6 @@ export default function ChatPage() {
                     msg.id === tempAssistantId ? data.message : msg
                   )
                 );
-
-                // Auto-generate title if conversation has no title
-                if (currentConvId) {
-                  const currentConv = conversations.find((c) => c.id === currentConvId);
-                  if (!currentConv?.title) {
-                    // Generate title in background
-                    (async () => {
-                      try {
-                        const headers = {
-                          ...getAuthHeaders(storage, storageKeys),
-                          "Content-Type": "application/json",
-                        };
-                        const response = await fetch(
-                          getApiUrl(`/api/agent/conversations/${currentConvId}/generate-title`),
-                          {
-                            method: "POST",
-                            headers,
-                          }
-                        );
-                        if (response.ok) {
-                          const { title } = await response.json();
-                          // Update conversation in local state
-                          setConversations((prev) =>
-                            prev.map((c) =>
-                              c.id === currentConvId ? { ...c, title } : c
-                            )
-                          );
-                        }
-                      } catch (error) {
-                        console.error("Failed to generate title:", error);
-                      }
-                    })();
-                  }
-                }
               } else if (currentEvent === "error") {
                 console.error("Stream error:", data.error);
                 setMessages((prev) =>
@@ -556,6 +551,11 @@ export default function ChatPage() {
     } finally {
       setIsStreaming(false);
       abortControllerRef.current = null;
+
+      // Auto-generate title if needed (after message completes or aborts)
+      if (convId) {
+        tryGenerateTitle(convId);
+      }
     }
   };
 
