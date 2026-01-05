@@ -64,24 +64,34 @@ export async function POST(
       )
     }
 
-    // 4. Build prompt with user/assistant pairs
+    // 4. Get system prompt context (first 100 chars)
+    const systemMessage = messages.find((m) => m.role === 'system')
+    const systemContext = systemMessage?.content.slice(0, 100) || ''
+
+    // 5. Build prompt with user/assistant pairs
     const conversationText = messages
       .filter((m) => m.role === 'user' || m.role === 'assistant')
       .map((m) => `${m.role}: ${m.content}`)
       .join('\n\n')
 
-    const prompt = `根据以下对话内容，生成一个简洁的标题。要求：
-- 中文或英文均可
-- 少于10个字
-- 准确概括对话主题
-- 不要使用引号
+    const prompt = `你是一个对话标题生成助手。根据以下信息，生成一个准确、具体的对话标题。
 
-对话内容：
+${systemContext ? `助手角色：${systemContext}...\n\n` : ''}对话内容：
 ${conversationText}
+
+标题要求：
+- 准确概括对话的核心主题或问题
+- 使用具体、有信息量的词汇，避免过于宽泛（如"讨论"、"咨询"等）
+- 中文或英文均可，8-15个字为佳
+- 直接描述主题，不要使用引号或标点
+
+例如：
+- 好："企业价值观落地策略"、"北京未来两周天气预警"
+- 差："关于企业文化的讨论"、"天气咨询"
 
 请以JSON格式返回：{"title": "你的标题"}`
 
-    // 5. Call OpenRouter with structured output (using GLM for cost efficiency)
+    // 6. Call OpenRouter with structured output (using GLM for cost efficiency)
     const model = new ChatOpenAI({
       modelName: 'z-ai/glm-4.5-air',
       apiKey: OPENROUTER_API_KEY,
@@ -100,7 +110,7 @@ ${conversationText}
               properties: {
                 title: {
                   type: 'string',
-                  description: 'Concise conversation title, less than 10 characters',
+                  description: 'Specific and informative conversation title, 8-15 characters',
                 },
               },
               required: ['title'],
@@ -115,7 +125,7 @@ ${conversationText}
 
     // 6. Parse response
     const result = JSON.parse(response.content as string)
-    const title = result.title.substring(0, 10) // Enforce max length
+    const title = result.title.substring(0, 20) // Max 20 chars (8-15 preferred)
 
     // 7. Update conversation title
     await updateConversationTitle(conversationId, title)
