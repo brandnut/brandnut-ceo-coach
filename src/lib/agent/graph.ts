@@ -5,12 +5,33 @@
  */
 
 import { StateGraph, END } from '@langchain/langgraph'
+import { AIMessage } from '@langchain/core/messages'
 import { agentStateAnnotation, AgentState } from './state'
 import { preprocessNode } from './nodes/preprocess'
 import { agentNode } from './nodes/agent'
 import { toolsNode } from './nodes/tools'
-import { postprocessNode } from './nodes/postprocess'
-import { shouldContinue } from './nodes/router'
+
+/**
+ * Router: Check if agent wants to use tools
+ * Inlined from router.ts for simplicity
+ */
+function shouldContinue(state: AgentState): 'continue' | 'end' {
+  const lastMessage = state.messages[state.messages.length - 1]
+
+  if (lastMessage._getType() === 'ai') {
+    const aiMessage = lastMessage as AIMessage
+    if (aiMessage.tool_calls && aiMessage.tool_calls.length > 0) {
+      console.log('[Router] Agent called tools, continuing...', {
+        toolCount: aiMessage.tool_calls.length,
+        tools: aiMessage.tool_calls.map((t) => t.name),
+      })
+      return 'continue'
+    }
+  }
+
+  console.log('[Router] No tool calls, ending...')
+  return 'end'
+}
 
 /**
  * Create the agent graph with tool support
@@ -21,7 +42,6 @@ export function createAgentGraph() {
     .addNode('preprocess', preprocessNode)
     .addNode('agent', agentNode)
     .addNode('tools', toolsNode)
-    .addNode('postprocess', postprocessNode)
 
     // Linear flow: start → preprocess → agent
     .addEdge('__start__', 'preprocess')
@@ -30,14 +50,11 @@ export function createAgentGraph() {
     // Conditional flow: agent → (continue to tools OR end)
     .addConditionalEdges('agent', shouldContinue, {
       continue: 'tools', // If agent called tools → execute tools
-      end: 'postprocess', // If no tool calls → end
+      end: END, // If no tool calls → end (removed postprocess)
     })
 
     // Loop: tools → agent (for next round)
     .addEdge('tools', 'agent')
-
-    // Final: postprocess → END
-    .addEdge('postprocess', END)
 
   return graph.compile()
 }

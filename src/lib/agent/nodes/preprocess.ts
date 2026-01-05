@@ -32,9 +32,16 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
 
   // 2. Inject system prompt with timestamp if provided
   if (state.systemPrompt) {
-    // Add current timestamp to system prompt
+    // Add current timestamp to system prompt (using local timezone)
     const now = new Date()
-    const timestamp = now.toISOString().replace('T', ' ').substring(0, 19)
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    const hours = String(now.getHours()).padStart(2, '0')
+    const minutes = String(now.getMinutes()).padStart(2, '0')
+    const seconds = String(now.getSeconds()).padStart(2, '0')
+
+    const timestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
     const promptWithTimestamp = `当前日期时间: ${timestamp}\n\n${state.systemPrompt}`
 
     messages.push(new SystemMessage(promptWithTimestamp))

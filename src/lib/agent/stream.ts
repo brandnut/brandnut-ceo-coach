@@ -1,13 +1,12 @@
 /**
  * Streaming Helper for LangGraph
  *
- * Extracts text chunks and tool events from graph stream.
- * Phase 2: Supports tool thinking and tool results.
+ * Simplified implementation using streamEvents.
  */
 
 import { CompiledStateGraph } from '@langchain/langgraph'
 import { AgentState } from './state'
-import { TOOL_REGISTRY } from './nodes/agent'
+import { TOOL_REGISTRY } from './nodes/tools'
 
 /**
  * Stream event types (can be text or tool events)
@@ -35,17 +34,16 @@ export async function* streamAgentResponse(
 ): AsyncGenerator<StreamEvent, void, unknown> {
   console.log('[Stream] Starting graph execution')
 
-  // Use streamEvents to get all events
-  // @ts-expect-error - LangGraph type compatibility issue with AgentState index signature
+  // @ts-expect-error - LangGraph type compatibility issue
   const stream = graph.streamEvents(initialState, {
     version: 'v2',
   })
 
+  const yieldedToolResults = new Set<string>()
   let hasYielded = false
-  const yieldedToolResults = new Set<string>() // Track yielded tool_call_ids to prevent duplicates
 
   for await (const event of stream) {
-    // 1. Agent tool calls
+    // Agent tool calls
     if (event.event === 'on_chat_model_end') {
       const message = event.data?.output
       if (message?.tool_calls && message.tool_calls.length > 0) {
@@ -62,19 +60,16 @@ export async function* streamAgentResponse(
       }
     }
 
-    // 2. Tool execution results
+    // Tool execution results
     if (event.event === 'on_chain_end') {
-      // Check if this is tools node completion
       const metadata = event.metadata
       if (metadata?.langgraph_node === 'tools') {
         const output = event.data?.output
         if (output?.messages) {
-          // Extract tool messages from output
           const toolMessages = output.messages.filter(
             (m: any) => m._getType && m._getType() === 'tool'
           )
           for (const toolMsg of toolMessages) {
-            // Deduplicate by tool_call_id
             if (toolMsg.tool_call_id && yieldedToolResults.has(toolMsg.tool_call_id)) {
               continue
             }
@@ -84,28 +79,19 @@ export async function* streamAgentResponse(
               yieldedToolResults.add(toolMsg.tool_call_id)
             }
 
-            const toolResultEvent = {
-              type: 'tool_result' as const,
+            yield {
+              type: 'tool_result',
               tool: toolMsg.name || 'unknown',
               tool_display_name: TOOL_REGISTRY[toolMsg.name]?.display_name || toolMsg.name,
               tool_call_id: toolMsg.tool_call_id || '',
               result: toolMsg.content,
             }
-
-            console.log('[Stream] Yielding tool_result event:', {
-              tool: toolResultEvent.tool,
-              tool_display_name: toolResultEvent.tool_display_name,
-              tool_call_id: toolResultEvent.tool_call_id,
-              resultLength: toolResultEvent.result.length,
-            })
-
-            yield toolResultEvent
           }
         }
       }
     }
 
-    // 3. LLM streaming chunks (final response text)
+    // LLM streaming chunks (final response text)
     if (event.event === 'on_chat_model_stream') {
       const chunk = event.data?.chunk
       if (chunk?.content && typeof chunk.content === 'string') {

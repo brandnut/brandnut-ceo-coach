@@ -76,7 +76,8 @@
       "Bash(npx tsc:*)",
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(npx tsx:*)"
     ],
     "deny": [],
     "ask": []

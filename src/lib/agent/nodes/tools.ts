@@ -1,10 +1,12 @@
 /**
  * Tools Node
  *
- * Executes tool calls and returns results as ToolMessages.
+ * Uses LangGraph's ToolNode instead of custom implementation.
  */
 
-import { AIMessage, ToolMessage } from '@langchain/core/messages'
+import { ToolNode } from '@langchain/langgraph/prebuilt'
+import { tool } from '@langchain/core/tools'
+import { z } from 'zod'
 import { AgentState } from '../state'
 
 const BOCHA_API_KEY = process.env.BOCHA_API_KEY
@@ -56,7 +58,7 @@ async function bochaSearch(args: {
       },
       body: JSON.stringify({
         query: args.query,
-        summary: args.summary !== false, // 默认 true
+        summary: args.summary !== false,
         freshness: args.freshness || 'noLimit',
         count: Math.min(args.count || 10, 50),
       }),
@@ -78,7 +80,6 @@ async function bochaSearch(args: {
       return '未找到相关搜索结果'
     }
 
-    // 格式化结果
     const results = webPages.map((page, idx) => {
       const parts = [
         `[${idx + 1}] ${page.name}`,
@@ -107,74 +108,39 @@ async function bochaSearch(args: {
 }
 
 /**
- * Tool 执行器
+ * Tool definitions for LangChain using structured tool
  */
-async function executeTool(name: string, args: any): Promise<string> {
-  console.log(`[Tools] Executing ${name}`, args)
+export const tools = [
+  tool(
+    async ({ query, summary, freshness, count }) => {
+      return await bochaSearch({ query, summary, freshness, count })
+    },
+    {
+      name: 'bocha_search',
+      description:
+        '从博查搜索网页信息和网页链接。搜索结果准确、完整，适合查询实时信息、新闻、资料等。' +
+        '使用场景: 当用户询问需要实时信息、最新数据、新闻、公开资料时使用。' +
+        '\n\n重要提示：' +
+        '\n- 根据查询需求设置 freshness 参数（oneDay/oneWeek/oneMonth/oneYear）来限制搜索时间范围' +
+        '\n- 根据需要的结果数量设置 count 参数（默认10条，最多50条）',
+      schema: z.object({
+        query: z.string().describe('搜索关键字或语句'),
+        summary: z.boolean().optional().describe('是否在搜索结果中包含摘要'),
+        freshness: z.enum(['noLimit', 'oneDay', 'oneWeek', 'oneMonth', 'oneYear']).optional().describe('搜索时间范围'),
+        count: z.number().min(1).max(50).optional().describe('返回结果数量'),
+      }),
+    }
+  ),
+]
 
-  switch (name) {
-    case 'bocha_search':
-    case 'web_search':
-      return await bochaSearch(args)
-
-    default:
-      return `Error: Unknown tool "${name}"`
-  }
+/**
+ * Tool registry for display names (for frontend)
+ */
+export const TOOL_REGISTRY: Record<string, { display_name: string }> = {
+  bocha_search: { display_name: '网页搜索' },
 }
 
 /**
- * Tools node - 执行 tool calls 并返回结果
+ * Tools node using LangGraph's built-in ToolNode
  */
-export async function toolsNode(state: AgentState): Promise<Partial<AgentState>> {
-  const messages = state.messages
-  if (messages.length === 0) {
-    throw new Error('Tools node: no messages in state')
-  }
-
-  const lastMessage = messages[messages.length - 1]
-
-  if (lastMessage._getType() !== 'ai') {
-    throw new Error('Tools node expects AIMessage as last message')
-  }
-
-  const aiMessage = lastMessage as AIMessage
-  const toolCalls = aiMessage.tool_calls || []
-
-  if (toolCalls.length === 0) {
-    console.warn('[Tools] No tool calls found, returning empty')
-    return {}
-  }
-
-  console.log('[Tools] Executing', toolCalls.length, 'tool calls')
-
-  // 并行执行所有 tool calls
-  const toolMessages = await Promise.all(
-    toolCalls.map(async (toolCall) => {
-      const { name, args, id } = toolCall
-
-      let result: string
-      try {
-        result = await executeTool(name, args)
-      } catch (error) {
-        console.error(`[Tools] Error executing ${name}:`, error)
-        result = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
-      }
-
-      console.log(`[Tools] ${name} completed`, {
-        resultLength: result.length,
-      })
-
-      // 返回 ToolMessage
-      return new ToolMessage({
-        content: result,
-        tool_call_id: id!,
-        name,
-      })
-    })
-  )
-
-  // Return tool messages (LangGraph will append them)
-  return {
-    messages: toolMessages,
-  }
-}
+export const toolsNode = new ToolNode(tools)
