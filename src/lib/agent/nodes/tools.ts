@@ -9,6 +9,7 @@ import { tool } from '@langchain/core/tools'
 import { z } from 'zod'
 import { AgentState } from '../state'
 import { loggedFetch } from '@/lib/http/logged-client'
+import { brandnutTools, BRANDNUT_TOOL_REGISTRY } from '@/lib/tools/brandnut'
 
 const BOCHA_API_KEY = process.env.BOCHA_API_KEY
 const BOCHA_API_URL = 'https://api.bocha.cn/v1/web-search'
@@ -118,6 +119,7 @@ async function bochaSearch(args: {
  */
 function createTools(userId: string, conversationId: string) {
   return [
+    // Bocha search tool
     tool(
       async ({ query, summary, freshness, count }) => {
         return await bochaSearch({ query, summary, freshness, count }, userId, conversationId)
@@ -138,6 +140,9 @@ function createTools(userId: string, conversationId: string) {
         }),
       }
     ),
+
+    // Brandnut API tools
+    ...brandnutTools,
   ]
 }
 
@@ -149,6 +154,7 @@ export const tools = createTools('', '')
  */
 export const TOOL_REGISTRY: Record<string, { display_name: string }> = {
   bocha_search: { display_name: '网页搜索' },
+  ...BRANDNUT_TOOL_REGISTRY,
 }
 
 /**

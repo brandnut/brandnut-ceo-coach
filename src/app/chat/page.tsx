@@ -762,10 +762,22 @@ export default function ChatPage() {
                 </div>
               ) : (
                 <>
-                  {messages
-                    .filter((msg) => msg.role !== "tool")
-                    .map((msg, index) => {
-                      const isLastMessage = index === messages.length - 1;
+                  {(() => {
+                    // 过滤消息：移除 tool 消息和空内容消息
+                    const visibleMessages = messages.filter((msg) => {
+                      // 1. 过滤掉 tool 类型的消息
+                      if (msg.role === 'tool') return false
+
+                      // 2. 过滤掉所有 content 为空的消息（包括工具调用中间消息）
+                      if (typeof msg.content === 'string' && msg.content.trim() === '') {
+                        return false
+                      }
+
+                      return true
+                    })
+
+                    return visibleMessages.map((msg, index) => {
+                      const isLastMessage = index === visibleMessages.length - 1;
                       const showLoading =
                         msg.role === "assistant" && isStreaming && isLastMessage;
 
@@ -811,7 +823,7 @@ export default function ChatPage() {
                         </div>
                       </div>
                     );
-                  })}
+                  })})()}
                   <div ref={messagesEndRef} />
                 </>
               )}
