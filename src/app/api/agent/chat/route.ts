@@ -14,6 +14,7 @@ import {
   getConversation,
   getConversationMessages,
   createMessage,
+  markMessageError,
 } from '@/lib/db/agent-queries'
 import { getUserChatConfig } from '@/lib/db/queries'
 import { streamChatResponseGraph } from '@/lib/agent/chat'
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Save user message immediately (eliminates consistency issues)
-    await createMessage(convId, 'user', message, attachments)
+    const userMessage = await createMessage(convId, 'user', message, attachments)
 
     // 5. Load conversation history
     const history = await getConversationMessages(convId)
@@ -217,6 +218,14 @@ export async function POST(request: NextRequest) {
               console.error('Inner error object:', innerError)
               errorMessage = `${errorMessage} - Details: ${innerError}`
             }
+          }
+
+          // Mark user message as having error to prevent history pollution
+          try {
+            await markMessageError(userMessage.id, errorMessage)
+            console.log(`Marked message ${userMessage.id} as error`)
+          } catch (markError) {
+            console.error('Failed to mark message as error:', markError)
           }
 
           const event = `event: error\ndata: ${JSON.stringify({

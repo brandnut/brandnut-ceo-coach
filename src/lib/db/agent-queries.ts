@@ -94,6 +94,7 @@ export async function getConversationMessages(
              tool_calls, tool_call_id, tool_name, created_at
       FROM agent_messages
       WHERE conversation_id = $1
+        AND error IS NULL
       ORDER BY created_at ASC
       LIMIT $2
     `
@@ -289,5 +290,24 @@ export async function createAgentLog(params: {
       params.status,
       params.errorMessage || null,
     ])
+  })
+}
+
+/**
+ * Mark a message as having an error
+ * This prevents the message from being included in future conversation history
+ */
+export async function markMessageError(
+  messageId: string,
+  errorMessage: string
+): Promise<void> {
+  return withClient(async (client) => {
+    const query = `
+      UPDATE agent_messages
+      SET error = $1
+      WHERE id = $2
+    `
+
+    await client.query(query, [errorMessage, messageId])
   })
 }
