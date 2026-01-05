@@ -16,7 +16,7 @@ import {
   createMessage,
 } from '@/lib/db/agent-queries'
 import { getUserChatConfig } from '@/lib/db/queries'
-import { streamChatResponse } from '@/lib/agent/chat'
+import { streamChatResponseGraph } from '@/lib/agent/chat'
 import { ChatRequest } from '@/types/agent'
 
 export async function POST(request: NextRequest) {
@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
         let fullResponse = ''
         let aiMessage = null
         let wasAborted = false
+        let currentToolCalls: any[] = [] // Track tool calls for saving
 
         try {
           // Send conversation event (for new conversations)
@@ -90,33 +91,82 @@ export async function POST(request: NextRequest) {
 
           // Stream AI response with abort handling
           try {
-            for await (const delta of streamChatResponse(history, attachments, {
+            for await (const delta of streamChatResponseGraph(history, attachments, {
+              userId: authResult.user.id,
+              conversationId: convId,
               modelName,
               systemPrompt,
             })) {
-              fullResponse += delta
+              // Handle different event types
+              if (typeof delta === 'string') {
+                // Text chunk
+                fullResponse += delta
 
-              // Send delta event
-              const event = `event: delta\ndata: ${JSON.stringify({
-                type: 'delta',
-                text: delta,
-              })}\n\n`
+                // Send delta event
+                const event = `event: delta\ndata: ${JSON.stringify({
+                  type: 'delta',
+                  text: delta,
+                })}\n\n`
 
-              try {
-                controller.enqueue(encoder.encode(event))
-              } catch (err: any) {
-                // Controller closed (client aborted), stop streaming
-                if (err.code === 'ERR_INVALID_STATE') {
-                  wasAborted = true
-                  break
+                try {
+                  controller.enqueue(encoder.encode(event))
+                } catch (err: any) {
+                  // Controller closed (client aborted), stop streaming
+                  if (err.code === 'ERR_INVALID_STATE') {
+                    wasAborted = true
+                    break
+                  }
+                  throw err
                 }
-                throw err
+              } else if (delta.type === 'tool_call') {
+                // Tool call event - save immediately
+                // Extract tool_calls with IDs from delta
+                currentToolCalls = delta.tools.map((t: any) => ({
+                  id: t.id || `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                  name: t.name,
+                  args: t.args,
+                }))
+
+                // Save assistant message with tool_calls
+                aiMessage = await createMessage(convId, 'assistant', '', undefined, {
+                  tool_calls: currentToolCalls,
+                })
+
+                // Send tool_call event
+                const event = `event: tool_call\ndata: ${JSON.stringify(delta)}\n\n`
+                try {
+                  controller.enqueue(encoder.encode(event))
+                } catch (err: any) {
+                  if (err.code === 'ERR_INVALID_STATE') {
+                    wasAborted = true
+                    break
+                  }
+                  throw err
+                }
+              } else if (delta.type === 'tool_result') {
+                // Tool result event - save immediately
+                await createMessage(convId, 'tool', delta.result, undefined, {
+                  tool_call_id: delta.tool_call_id,
+                  tool_name: delta.tool,
+                })
+
+                // Send tool_result event
+                const event = `event: tool_result\ndata: ${JSON.stringify(delta)}\n\n`
+                try {
+                  controller.enqueue(encoder.encode(event))
+                } catch (err: any) {
+                  if (err.code === 'ERR_INVALID_STATE') {
+                    wasAborted = true
+                    break
+                  }
+                  throw err
+                }
               }
             }
           } finally {
-            // Save whatever was accumulated, even on abort
-            // This ensures partial responses are persisted
-            if (fullResponse.length > 0 && !aiMessage) {
+            // Save final assistant text response if we have accumulated text
+            if (fullResponse.length > 0) {
+              // If we already saved aiMessage with tool_calls, this will be a new message
               aiMessage = await createMessage(convId, 'assistant', fullResponse)
             }
           }
@@ -142,7 +192,23 @@ export async function POST(request: NextRequest) {
         } catch (error) {
           console.error('Streaming error:', error)
 
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          // Extract detailed error information
+          let errorMessage = 'Unknown error'
+          if (error instanceof Error) {
+            errorMessage = error.message
+            // Include additional details for API errors
+            const errorObj = error as any
+            if (errorObj.status) {
+              errorMessage = `${errorObj.status} ${errorMessage}`
+            }
+            if (errorObj.code) {
+              errorMessage = `${errorMessage} (code: ${errorObj.code})`
+            }
+            if (errorObj.type) {
+              errorMessage = `${errorMessage} [${errorObj.type}]`
+            }
+          }
+
           const event = `event: error\ndata: ${JSON.stringify({
             type: 'error',
             error: errorMessage,

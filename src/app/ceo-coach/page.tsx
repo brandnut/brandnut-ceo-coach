@@ -483,6 +483,18 @@ export default function ChatPage() {
                       : msg
                   )
                 );
+              } else if (currentEvent === "tool_call" && data.tools) {
+                // Tool execution started - update existing assistant message
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === tempAssistantId
+                      ? { ...msg, tool_calls: data.tools }
+                      : msg
+                  )
+                );
+              } else if (currentEvent === "tool_result") {
+                // Tool execution completed (text will stream via delta events)
+                console.log("[Tool Result]", data.tool_display_name, data.tool_call_id);
               }
 
               currentEvent = ""; // Reset after processing
@@ -528,6 +540,23 @@ export default function ChatPage() {
   if (!isAuthenticated && !guestMode.enabled) {
     return null;
   }
+
+  // Helper: Generate tool placeholder text
+  const generateToolPlaceholderText = (
+    tools: Array<{ display_name?: string; name: string }>
+  ) => {
+    const names = tools.map((t) => t.display_name || t.name);
+    const counts: Record<string, number> = {};
+    names.forEach((n) => (counts[n] = (counts[n] || 0) + 1));
+    const unique = Object.keys(counts);
+
+    if (unique.length === 1) {
+      const name = unique[0];
+      const count = counts[name];
+      return count === 1 ? `正在${name}...` : `正在${name} (${count}个任务)...`;
+    }
+    return `正在${unique.join("、")}...`;
+  };
 
   const SidebarContent = () => (
     <>
@@ -656,10 +685,12 @@ export default function ChatPage() {
                 </div>
               ) : (
                 <>
-                  {messages.map((msg, index) => {
-                    const isLastMessage = index === messages.length - 1;
-                    const showLoading =
-                      msg.role === "assistant" && isStreaming && isLastMessage;
+                  {messages
+                    .filter((msg) => msg.role !== "tool")
+                    .map((msg, index) => {
+                      const isLastMessage = index === messages.length - 1;
+                      const showLoading =
+                        msg.role === "assistant" && isStreaming && isLastMessage;
 
                     return (
                       <div key={msg.id} className={`message ${msg.role}`}>
@@ -684,13 +715,19 @@ export default function ChatPage() {
                             </div>
                           )}
 
+                          {/* Loading indicator - text changes based on state */}
                           {showLoading && (
                             <div className="message-loading">
                               <span className="spinner"></span>
-                              <span className="loading-text">正在思考</span>
+                              <span className="loading-text">
+                                {msg.tool_calls && msg.tool_calls.length > 0
+                                  ? generateToolPlaceholderText(msg.tool_calls)
+                                  : "正在思考"}
+                              </span>
                             </div>
                           )}
 
+                          {/* Message content */}
                           <div className="markdown-body">
                             <CustomStreamdown>{msg.content}</CustomStreamdown>
                           </div>

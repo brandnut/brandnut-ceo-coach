@@ -1,37 +1,15 @@
 /**
  * Agent Chat Service
  *
- * Simple LLM integration with OpenRouter + Claude 4.5 Sonnet.
- * No LangGraph complexity for first version - direct ChatOpenAI call.
+ * Phase 1: LangGraph-based agent with 3-node graph
+ * (preprocess → agent → postprocess)
  */
 
-import { ChatOpenAI } from '@langchain/openai'
-import { HumanMessage, AIMessage, SystemMessage, BaseMessage } from '@langchain/core/messages'
+import { HumanMessage, AIMessage, SystemMessage, ToolMessage, BaseMessage } from '@langchain/core/messages'
 import { Message, Attachment } from '@/types/agent'
-
-// OpenRouter configuration
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
-const DEFAULT_MODEL = 'anthropic/claude-3.5-sonnet'
-
-if (!OPENROUTER_API_KEY) {
-  throw new Error('OPENROUTER_API_KEY is not configured')
-}
-
-/**
- * Initialize ChatOpenAI with OpenRouter endpoint
- * Supports organization-specific model configuration
- */
-function createChatModel(modelName?: string) {
-  return new ChatOpenAI({
-    modelName: modelName || DEFAULT_MODEL,
-    apiKey: OPENROUTER_API_KEY,
-    configuration: {
-      baseURL: 'https://openrouter.ai/api/v1',
-    },
-    streaming: true,
-    temperature: 0.7,
-  })
-}
+import { createAgentGraph } from './graph'
+import { streamAgentResponse } from './stream'
+import { AgentState } from './state'
 
 /**
  * Convert attachments to LangChain content format
@@ -67,25 +45,12 @@ function convertAttachmentsToContent(attachments: Attachment[]) {
 
 /**
  * Convert messages to LangChain format with multimodal support
- *
- * All messages carry their attachments (images/PDFs from DB).
- * The last user message also gets new attachments from the current request.
- *
- * Optionally injects a system message at the beginning.
+ * Phase 2: Supports tool messages
  */
 export function convertToLangChainMessages(
   messages: Message[],
-  newAttachments?: Attachment[],
-  systemPrompt?: string
+  newAttachments?: Attachment[]
 ): BaseMessage[] {
-  const langchainMessages: BaseMessage[] = []
-
-  // Inject system message if provided
-  if (systemPrompt) {
-    langchainMessages.push(new SystemMessage(systemPrompt))
-  }
-
-  // Convert user/assistant messages
   const convertedMessages = messages.map((msg, idx) => {
     const isLastUserMessage = idx === messages.length - 1 && msg.role === 'user'
 
@@ -113,69 +78,69 @@ export function convertToLangChainMessages(
     if (msg.role === 'user') {
       return new HumanMessage(msg.content)
     } else if (msg.role === 'assistant') {
-      return new AIMessage(msg.content)
+      // Check if this message has tool_calls
+      if (msg.tool_calls && msg.tool_calls.length > 0) {
+        return new AIMessage({
+          content: msg.content || '',
+          tool_calls: msg.tool_calls,
+        })
+      } else {
+        return new AIMessage(msg.content)
+      }
+    } else if (msg.role === 'tool') {
+      // Tool result message
+      return new ToolMessage({
+        content: msg.content,
+        tool_call_id: msg.tool_call_id!,
+        name: msg.tool_name!,
+      })
     } else {
       // system messages from DB
       return new SystemMessage(msg.content)
     }
   })
 
-  return [...langchainMessages, ...convertedMessages]
+  return convertedMessages
 }
 
 /**
- * Stream chat response using OpenRouter + Claude
+ * Stream chat response using LangGraph
  *
- * Yields text chunks as they arrive.
- * Supports organization-specific model and system prompt.
+ * Yields text chunks and tool events as they arrive from graph execution.
+ * Phase 2: Supports tool thinking and results.
  */
-export async function* streamChatResponse(
+export async function* streamChatResponseGraph(
   messages: Message[],
   newAttachments?: Attachment[],
-  options?: {
+  options: {
+    userId: string
+    conversationId: string
     modelName?: string
     systemPrompt?: string
   }
-): AsyncGenerator<string, void, unknown> {
-  const model = createChatModel(options?.modelName)
+): AsyncGenerator<string | Record<string, any>, void, unknown> {
+  // Convert to LangChain format
+  const langchainMessages = convertToLangChainMessages(messages, newAttachments)
 
-  // Convert to LangChain format with optional system prompt
-  const langchainMessages = convertToLangChainMessages(
-    messages,
-    newAttachments,
-    options?.systemPrompt
-  )
+  // Create initial state
+  const initialState: AgentState = {
+    messages: langchainMessages,
+    userId: options.userId,
+    conversationId: options.conversationId,
+    systemPrompt: options.systemPrompt,
+    modelName: options.modelName,
+  }
 
-  // Stream response
-  const stream = await model.stream(langchainMessages)
+  // Create and run graph
+  const graph = createAgentGraph()
 
-  for await (const chunk of stream) {
-    if (chunk.content && typeof chunk.content === 'string') {
-      yield chunk.content
+  for await (const event of streamAgentResponse(graph, initialState)) {
+    if (event.type === 'text') {
+      // Yield text chunks as strings (for backward compatibility)
+      yield event.content
+    } else {
+      // Yield tool events as objects
+      yield event
     }
   }
-}
-
-/**
- * Get non-streaming response (for testing or non-SSE scenarios)
- */
-export async function getChatResponse(
-  messages: Message[],
-  newAttachments?: Attachment[],
-  options?: {
-    modelName?: string
-    systemPrompt?: string
-  }
-): Promise<string> {
-  const model = createChatModel(options?.modelName)
-
-  const langchainMessages = convertToLangChainMessages(
-    messages,
-    newAttachments,
-    options?.systemPrompt
-  )
-
-  const response = await model.invoke(langchainMessages)
-
-  return response.content as string
 }

@@ -15,10 +15,22 @@ export interface Attachment {
 export interface Message {
   id: string
   conversationId: string
-  role: 'user' | 'assistant' | 'system'
+  role: 'user' | 'assistant' | 'system' | 'tool'
   content: string
   attachments: Attachment[]
-  createdAt: string  // ISO timestamp
+
+  // Phase 2: Tool support
+  tool_calls?: Array<{
+    id: string
+    name: string
+    display_name?: string // Chinese name for frontend display
+    args: Record<string, any>
+  }>
+  tool_call_id?: string
+  tool_name?: string
+  tool_display_name?: string // Chinese name for tool (when role=tool)
+
+  createdAt: string // ISO timestamp
 }
 
 export interface Conversation {
@@ -54,9 +66,31 @@ export interface SSEErrorEvent {
   error: string
 }
 
+export interface SSEToolCallEvent {
+  type: 'tool_call'
+  message: string
+  tools: Array<{
+    id: string
+    name: string
+    display_name: string
+    args: Record<string, any>
+  }>
+}
+
+export interface SSEToolResultEvent {
+  type: 'tool_result'
+  tool: string
+  tool_display_name: string
+  args?: Record<string, any>
+  result: string
+  tool_call_id: string
+}
+
 export type SSEEvent =
   | SSEConversationEvent
   | SSEDeltaEvent
+  | SSEToolCallEvent
+  | SSEToolResultEvent
   | SSEDoneEvent
   | SSEErrorEvent
 

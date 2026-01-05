@@ -7,6 +7,7 @@
 
 import pool from '@/lib/db'
 import { Conversation, Message, Attachment } from '@/types/agent'
+import { TOOL_REGISTRY } from '@/lib/agent/nodes/agent'
 
 // Database wrapper from existing queries.ts pattern
 async function withClient<T>(callback: (client: any) => Promise<T>): Promise<T> {
@@ -89,7 +90,8 @@ export async function getConversationMessages(
 ): Promise<Message[]> {
   return withClient(async (client) => {
     const query = `
-      SELECT id, conversation_id, role, content, attachments, created_at
+      SELECT id, conversation_id, role, content, attachments,
+             tool_calls, tool_call_id, tool_name, created_at
       FROM agent_messages
       WHERE conversation_id = $1
       ORDER BY created_at ASC
@@ -98,14 +100,34 @@ export async function getConversationMessages(
 
     const result = await client.query(query, [conversationId, limit])
 
-    return result.rows.map((row) => ({
-      id: row.id,
-      conversationId: row.conversation_id,
-      role: row.role,
-      content: row.content,
-      attachments: row.attachments || [],
-      createdAt: row.created_at.toISOString(),
-    }))
+    return result.rows.map((row) => {
+      // Add display_name to tool_calls
+      const tool_calls = row.tool_calls
+        ? row.tool_calls.map((tc: any) => ({
+            ...tc,
+            display_name: TOOL_REGISTRY[tc.name]?.display_name || tc.name,
+          }))
+        : undefined
+
+      // Add tool_display_name for tool messages
+      const tool_display_name =
+        row.role === 'tool' && row.tool_name
+          ? TOOL_REGISTRY[row.tool_name]?.display_name || row.tool_name
+          : undefined
+
+      return {
+        id: row.id,
+        conversationId: row.conversation_id,
+        role: row.role,
+        content: row.content,
+        attachments: row.attachments || [],
+        tool_calls,
+        tool_call_id: row.tool_call_id || undefined,
+        tool_name: row.tool_name || undefined,
+        tool_display_name,
+        createdAt: row.created_at.toISOString(),
+      }
+    })
   })
 }
 
@@ -114,15 +136,24 @@ export async function getConversationMessages(
  */
 export async function createMessage(
   conversationId: string,
-  role: 'user' | 'assistant' | 'system',
+  role: 'user' | 'assistant' | 'system' | 'tool',
   content: string,
-  attachments?: Attachment[]
+  attachments?: Attachment[],
+  toolData?: {
+    tool_calls?: Array<{ id: string; name: string; args: Record<string, any> }>
+    tool_call_id?: string
+    tool_name?: string
+  }
 ): Promise<Message> {
   return withClient(async (client) => {
     const query = `
-      INSERT INTO agent_messages (conversation_id, role, content, attachments)
-      VALUES ($1, $2, $3, $4)
-      RETURNING id, conversation_id, role, content, attachments, created_at
+      INSERT INTO agent_messages (
+        conversation_id, role, content, attachments,
+        tool_calls, tool_call_id, tool_name
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING id, conversation_id, role, content, attachments,
+                tool_calls, tool_call_id, tool_name, created_at
     `
 
     const result = await client.query(query, [
@@ -130,15 +161,37 @@ export async function createMessage(
       role,
       content,
       JSON.stringify(attachments || []),
+      toolData?.tool_calls ? JSON.stringify(toolData.tool_calls) : null,
+      toolData?.tool_call_id || null,
+      toolData?.tool_name || null,
     ])
 
     const row = result.rows[0]
+
+    // Add display_name to tool_calls
+    const tool_calls = row.tool_calls
+      ? row.tool_calls.map((tc: any) => ({
+          ...tc,
+          display_name: TOOL_REGISTRY[tc.name]?.display_name || tc.name,
+        }))
+      : undefined
+
+    // Add tool_display_name for tool messages
+    const tool_display_name =
+      row.role === 'tool' && row.tool_name
+        ? TOOL_REGISTRY[row.tool_name]?.display_name || row.tool_name
+        : undefined
+
     return {
       id: row.id,
       conversationId: row.conversation_id,
       role: row.role,
       content: row.content,
       attachments: row.attachments || [],
+      tool_calls,
+      tool_call_id: row.tool_call_id || undefined,
+      tool_name: row.tool_name || undefined,
+      tool_display_name,
       createdAt: row.created_at.toISOString(),
     }
   })
