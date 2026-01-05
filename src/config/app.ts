@@ -154,5 +154,5 @@ export const appInfo = {
 };
 // Agent 配置
 export const agentConfig = {
-  maxConversationRounds: 10, // 限制对话轮数，防止上下文爆炸 (10轮 = ~20条消息)
+   maxConversationRounds: 20, // 限制对话轮数，防止上下文爆炸 (10轮 = ~20条消息)
 };
