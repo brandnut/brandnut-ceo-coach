@@ -18,8 +18,9 @@ const ALLOWED_TYPES = {
   'application/pdf': '.pdf',
 }
 
-// Max file size: 10MB
+// Max file size: 10MB for images, 5MB for PDFs (LLM provider limit)
 const MAX_FILE_SIZE = 10 * 1024 * 1024
+const MAX_PDF_SIZE = 5 * 1024 * 1024
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,12 +52,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate file size
-    if (file.size > MAX_FILE_SIZE) {
+    // Validate file size (stricter limit for PDFs since they can't be compressed)
+    const isPDF = file.type === 'application/pdf'
+    const maxSize = isPDF ? MAX_PDF_SIZE : MAX_FILE_SIZE
+
+    if (file.size > maxSize) {
       return NextResponse.json(
         {
           error: 'File too large',
-          message: `Max file size: ${MAX_FILE_SIZE / 1024 / 1024}MB`
+          message: isPDF
+            ? `PDF files must be under ${MAX_PDF_SIZE / 1024 / 1024}MB (LLM provider limit)`
+            : `Max file size: ${MAX_FILE_SIZE / 1024 / 1024}MB`
         },
         { status: 400 }
       )
@@ -72,8 +78,8 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    // Upload to Aliyun OSS
-    const fileUrl = await uploadToOSS(filename, buffer)
+    // Upload to Aliyun OSS (with MIME type for image processing)
+    const fileUrl = await uploadToOSS(filename, buffer, file.type)
 
     return NextResponse.json({
       success: true,

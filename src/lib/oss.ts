@@ -32,19 +32,44 @@ function createOSSClient() {
  *
  * @param filename - Destination filename in OSS (e.g., "uploads/123-abc.pdf")
  * @param buffer - File buffer
+ * @param mimeType - MIME type of the file
  * @returns Signed URL with 7-day expiration for LLM access
  */
-export async function uploadToOSS(filename: string, buffer: Buffer): Promise<string> {
+export async function uploadToOSS(
+  filename: string,
+  buffer: Buffer,
+  mimeType: string
+): Promise<string> {
   const client = createOSSClient()
 
   // Upload file to OSS
   await client.put(filename, buffer)
 
-  // Generate signed URL with 7-day expiration (604800 seconds)
-  // This allows LLM to access the file without making bucket public
-  const signedUrl = client.signatureUrl(filename, {
-    expires: 604800, // 7 days
-  })
+  // For images, apply OSS image processing to compress and ensure under 5MB
+  // LLM providers (like Bedrock) have 5MB image limits
+  const isImage = mimeType.startsWith('image/')
 
-  return signedUrl
+  if (isImage) {
+    // OSS image processing parameters:
+    // - resize to max width 2048px (maintains aspect ratio)
+    // - convert to JPEG for better compression
+    // - quality 80 (good balance between size and quality)
+    // This typically reduces images to well under 5MB
+    const process = 'image/resize,w_2048,m_lfit/format,jpg/quality,q_80'
+
+    // Generate signed URL with image processing
+    const signedUrl = client.signatureUrl(filename, {
+      expires: 604800, // 7 days
+      process,
+    })
+
+    return signedUrl
+  } else {
+    // For PDFs and other files, return standard signed URL
+    const signedUrl = client.signatureUrl(filename, {
+      expires: 604800, // 7 days
+    })
+
+    return signedUrl
+  }
 }

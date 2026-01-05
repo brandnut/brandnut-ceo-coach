@@ -71,7 +71,8 @@
       "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjgxMjcyNDAsInN1YiI6IjU0NWI4ZmRhLTliYWEtNDMwYi05NDVmLWEyNzQ3NGMzYTQ0NSIsInR5cGUiOiJhY2Nlc3MiLCJ1c2VybmFtZSI6ImtlaXRoIiwiZW1haWwiOiJrZWl0aGhjaGVuQGljbG91ZC5jb20iLCJyb2xlIjoidXNlciJ9.PmLZGQi1gdiYrDm8pXuTUMIgUD_0JBp8xkyU-OU91Mo\")",
       "Bash(/tmp/test.txt)",
       "Bash(timeout 2s curl:*)",
-      "Bash(timeout 30s curl:*)"
+      "Bash(timeout 30s curl:*)",
+      "Bash(bash:*)"
     ],
     "deny": [],
     "ask": []
