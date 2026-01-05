@@ -796,7 +796,7 @@ export default function ChatPage() {
                     <Upload
                       multiple
                       showUploadList={false}
-                      accept=".pdf,.txt,.doc,.docx,.md,.csv,.xlsx,.xls,.pptx,.ppt"
+                      accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,image/png,image/jpeg,image/jpg,image/webp,image/gif,application/pdf"
                       disabled={isStreaming}
                       maxCount={10}
                       beforeUpload={(file) => {
@@ -892,7 +892,7 @@ export default function ChatPage() {
                           );
                         };
 
-                        xhr.open("POST", getApiUrl("/api/files/upload"));
+                        xhr.open("POST", getApiUrl("/api/upload"));
 
                         // Add Authorization header
                         const authHeaders = getAuthHeaders(

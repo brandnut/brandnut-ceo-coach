@@ -1,15 +1,12 @@
 /**
  * File Upload API - POST /api/upload
  *
- * Handles image and PDF uploads, stores temporarily on disk.
- * Later: hook up to object storage (S3, Aliyun OSS, etc.)
+ * Handles image and PDF uploads to Aliyun OSS.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
-import { existsSync } from 'fs'
-import path from 'path'
 import { getCurrentUser, createAuthErrorResponse } from '@/lib/auth-middleware'
+import { uploadToOSS } from '@/lib/oss'
 
 // Allowed file types
 const ALLOWED_TYPES = {
@@ -23,9 +20,6 @@ const ALLOWED_TYPES = {
 
 // Max file size: 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024
-
-// Upload directory (public so Next.js can serve it)
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
 
 export async function POST(request: NextRequest) {
   try {
@@ -68,29 +62,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Ensure upload directory exists
-    if (!existsSync(UPLOAD_DIR)) {
-      await mkdir(UPLOAD_DIR, { recursive: true })
-    }
-
     // Generate unique filename
     const timestamp = Date.now()
     const randomSuffix = Math.random().toString(36).substring(2, 8)
     const extension = ALLOWED_TYPES[file.type as keyof typeof ALLOWED_TYPES]
-    const filename = `${timestamp}-${randomSuffix}${extension}`
-    const filepath = path.join(UPLOAD_DIR, filename)
+    const filename = `uploads/${timestamp}-${randomSuffix}${extension}`
 
-    // Write file to disk
+    // Convert file to buffer
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    await writeFile(filepath, buffer)
 
-    // Construct URL (served by Next.js from /public)
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_PATH || ''
-    const fileUrl = `${baseUrl}/uploads/${filename}`
+    // Upload to Aliyun OSS
+    const fileUrl = await uploadToOSS(filename, buffer)
 
     return NextResponse.json({
       success: true,
+      id: filename, // Use filename as ID
+      url: fileUrl,
       file: {
         url: fileUrl,
         name: file.name,
