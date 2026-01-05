@@ -255,3 +255,39 @@ export async function getUserConversations(
     return { conversations, total }
   })
 }
+
+/**
+ * Create an agent log entry
+ */
+export async function createAgentLog(params: {
+  userId: string
+  conversationId: string
+  modelName: string
+  request: any
+  response: any
+  durationMs: number
+  status: 'success' | 'error'
+  errorMessage?: string
+}): Promise<void> {
+  return withClient(async (client) => {
+    const query = `
+      INSERT INTO agent_logs (
+        user_id, conversation_id, model_name,
+        request, response,
+        duration_ms, status, error_message
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `
+
+    await client.query(query, [
+      params.userId,
+      params.conversationId,
+      params.modelName,
+      JSON.stringify(params.request),
+      JSON.stringify(params.response),
+      params.durationMs,
+      params.status,
+      params.errorMessage || null,
+    ])
+  })
+}

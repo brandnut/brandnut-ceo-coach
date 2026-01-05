@@ -191,6 +191,10 @@ export async function POST(request: NextRequest) {
           }
         } catch (error) {
           console.error('Streaming error:', error)
+          // Log full error object for debugging
+          if (error && typeof error === 'object') {
+            console.error('Error details:', JSON.stringify(error, null, 2))
+          }
 
           // Extract detailed error information
           let errorMessage = 'Unknown error'
@@ -206,6 +210,12 @@ export async function POST(request: NextRequest) {
             }
             if (errorObj.type) {
               errorMessage = `${errorMessage} [${errorObj.type}]`
+            }
+            // Include error.error object if present
+            if (errorObj.error && typeof errorObj.error === 'object') {
+              const innerError = JSON.stringify(errorObj.error)
+              console.error('Inner error object:', innerError)
+              errorMessage = `${errorMessage} - Details: ${innerError}`
             }
           }
 

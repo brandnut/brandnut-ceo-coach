@@ -6,6 +6,7 @@
 
 import { ChatOpenAI } from '@langchain/openai'
 import { AgentState } from '../state'
+import { createAgentLog } from '@/lib/db/agent-queries'
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
 const DEFAULT_MODEL = 'anthropic/claude-3.5-sonnet'
@@ -80,33 +81,77 @@ export const TOOL_REGISTRY: Record<string, { display_name: string }> = {
  * Agent node - invokes LLM with tool support
  */
 export async function agentNode(state: AgentState): Promise<Partial<AgentState>> {
+  const modelName = state.modelName || DEFAULT_MODEL
+
   console.log('[Agent] Starting LLM inference', {
-    model: state.modelName || DEFAULT_MODEL,
+    model: modelName,
     messageCount: state.messages.length,
   })
 
-  // Create model with tool support (via modelKwargs for OpenRouter)
-  const model = new ChatOpenAI({
-    modelName: state.modelName || DEFAULT_MODEL,
-    apiKey: OPENROUTER_API_KEY,
-    configuration: {
-      baseURL: 'https://openrouter.ai/api/v1',
-    },
-    streaming: true,
+  // Prepare request payload for logging
+  const requestPayload = {
+    model: modelName,
+    messages: state.messages.map((msg) => ({
+      role: msg._getType(),
+      content: msg.content,
+      tool_calls: (msg as any).tool_calls,
+    })),
+    tools,
     temperature: 0.7,
-    modelKwargs: {
-      tools, // ← Pass tools via modelKwargs for OpenRouter
-    },
-  })
+    streaming: true,
+  }
 
-  // Invoke LLM
-  const response = await model.invoke(state.messages)
+  const startTime = Date.now()
+  let status: 'success' | 'error' = 'success'
+  let errorMessage: string | undefined
+  let response: any
 
-  console.log('[Agent] LLM response received', {
-    contentLength: typeof response.content === 'string' ? response.content.length : 0,
-    hasToolCalls: response.tool_calls && response.tool_calls.length > 0,
-    toolCallCount: response.tool_calls?.length || 0,
-  })
+  try {
+    // Create model with tool support (via modelKwargs for OpenRouter)
+    const model = new ChatOpenAI({
+      modelName,
+      apiKey: OPENROUTER_API_KEY,
+      configuration: {
+        baseURL: 'https://openrouter.ai/api/v1',
+      },
+      streaming: true,
+      temperature: 0.7,
+      modelKwargs: {
+        tools, // ← Pass tools via modelKwargs for OpenRouter
+        usage: { include: true }, // ← Enable usage metadata including cost
+      },
+    })
+
+    // Invoke LLM
+    response = await model.invoke(state.messages)
+
+    console.log('[Agent] LLM response received', {
+      contentLength: typeof response.content === 'string' ? response.content.length : 0,
+      hasToolCalls: response.tool_calls && response.tool_calls.length > 0,
+      toolCallCount: response.tool_calls?.length || 0,
+    })
+  } catch (error) {
+    status = 'error'
+    errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('[Agent] LLM call failed:', errorMessage)
+    throw error
+  } finally {
+    const durationMs = Date.now() - startTime
+
+    // Save log to database (non-blocking)
+    createAgentLog({
+      userId: state.userId,
+      conversationId: state.conversationId,
+      modelName,
+      request: requestPayload,
+      response: response || { error: errorMessage },
+      durationMs,
+      status,
+      errorMessage,
+    }).catch((err) => {
+      console.error('[Agent] Failed to save log:', err)
+    })
+  }
 
   // Append AI response to messages
   return {

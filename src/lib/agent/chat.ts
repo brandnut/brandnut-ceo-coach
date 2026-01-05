@@ -51,54 +51,51 @@ export function convertToLangChainMessages(
   messages: Message[],
   newAttachments?: Attachment[]
 ): BaseMessage[] {
-  const convertedMessages = messages.map((msg, idx) => {
-    const isLastUserMessage = idx === messages.length - 1 && msg.role === 'user'
+  // Filter out tool messages - they should not be sent to LLM
+  // Tool results are already incorporated in assistant responses
+  const convertedMessages = messages
+    .filter((msg) => msg.role !== 'tool')
+    .map((msg, idx) => {
+      const isLastUserMessage = idx === messages.length - 1 && msg.role === 'user'
 
-    // Use stored attachments from DB for all messages
-    // Plus new attachments for the last user message
-    const attachments = isLastUserMessage
-      ? [...(msg.attachments || []), ...(newAttachments || [])]
-      : msg.attachments
+      // Use stored attachments from DB for all messages
+      // Plus new attachments for the last user message
+      const attachments = isLastUserMessage
+        ? [...(msg.attachments || []), ...(newAttachments || [])]
+        : msg.attachments
 
-    // Handle multimodal messages
-    if (attachments && attachments.length > 0) {
-      const imageContent = convertAttachmentsToContent(attachments)
+      // Handle multimodal messages
+      if (attachments && attachments.length > 0) {
+        const imageContent = convertAttachmentsToContent(attachments)
 
-      if (imageContent.length > 0) {
-        return new HumanMessage({
-          content: [
-            { type: 'text', text: msg.content },
-            ...imageContent,
-          ],
-        })
+        if (imageContent.length > 0) {
+          return new HumanMessage({
+            content: [
+              { type: 'text', text: msg.content },
+              ...imageContent,
+            ],
+          })
+        }
       }
-    }
 
-    // Handle text-only messages
-    if (msg.role === 'user') {
-      return new HumanMessage(msg.content)
-    } else if (msg.role === 'assistant') {
-      // Check if this message has tool_calls
-      if (msg.tool_calls && msg.tool_calls.length > 0) {
-        return new AIMessage({
-          content: msg.content || '',
-          tool_calls: msg.tool_calls,
-        })
+      // Handle text-only messages
+      if (msg.role === 'user') {
+        return new HumanMessage(msg.content)
+      } else if (msg.role === 'assistant') {
+        // Check if this message has tool_calls
+        if (msg.tool_calls && msg.tool_calls.length > 0) {
+          return new AIMessage({
+            content: msg.content || '',
+            tool_calls: msg.tool_calls,
+          })
+        } else {
+          return new AIMessage(msg.content)
+        }
       } else {
-        return new AIMessage(msg.content)
+        // system messages from DB
+        return new SystemMessage(msg.content)
       }
-    } else if (msg.role === 'tool') {
-      // Tool result message
-      return new ToolMessage({
-        content: msg.content,
-        tool_call_id: msg.tool_call_id!,
-        name: msg.tool_name!,
-      })
-    } else {
-      // system messages from DB
-      return new SystemMessage(msg.content)
-    }
-  })
+    })
 
   return convertedMessages
 }
