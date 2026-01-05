@@ -382,6 +382,9 @@ export default function ChatPage() {
 
     const userMessage = message.trim();
 
+    // Track conversation ID for title generation (may be updated during stream)
+    let finalConvId = currentConvId;
+
     // Convert attachments to agent API format
     const agentAttachments: Attachment[] = attachments
       .filter((f) => f.uploadedId && f.url)
@@ -483,6 +486,7 @@ export default function ChatPage() {
 
               if (currentEvent === "conversation" && data.conversationId) {
                 // New conversation created
+                finalConvId = data.conversationId;
                 setCurrentConvId(data.conversationId);
                 loadConversations();
                 closeMobileSidebarIfNeeded();
@@ -553,8 +557,8 @@ export default function ChatPage() {
       abortControllerRef.current = null;
 
       // Auto-generate title if needed (after message completes or aborts)
-      if (convId) {
-        tryGenerateTitle(convId);
+      if (finalConvId) {
+        tryGenerateTitle(finalConvId);
       }
     }
   };
