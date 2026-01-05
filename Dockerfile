@@ -19,6 +19,12 @@ ARG DIFY_API_URL
 ARG NEXTAUTH_URL
 ARG NEXT_PUBLIC_BASE_PATH
 ARG GUEST_MODE_ENABLED
+ARG OPENROUTER_API_KEY
+ARG BOCHA_API_KEY
+ARG OSS_ACCESS_KEY_ID
+ARG OSS_ACCESS_KEY_SECRET
+ARG OSS_BUCKET
+ARG OSS_REGION
 
 # Create .env file from build arguments
 RUN echo "DATABASE_URL=${DATABASE_URL}" > .env && \
@@ -29,7 +35,13 @@ RUN echo "DATABASE_URL=${DATABASE_URL}" > .env && \
     echo "DIFY_API_URL=${DIFY_API_URL}" >> .env && \
     echo "NEXTAUTH_URL=${NEXTAUTH_URL}" >> .env && \
     echo "NEXT_PUBLIC_BASE_PATH=${NEXT_PUBLIC_BASE_PATH}" >> .env && \
-    echo "GUEST_MODE_ENABLED=${GUEST_MODE_ENABLED}" >> .env
+    echo "GUEST_MODE_ENABLED=${GUEST_MODE_ENABLED}" >> .env && \
+    echo "OPENROUTER_API_KEY=${OPENROUTER_API_KEY}" >> .env && \
+    echo "BOCHA_API_KEY=${BOCHA_API_KEY}" >> .env && \
+    echo "OSS_ACCESS_KEY_ID=${OSS_ACCESS_KEY_ID}" >> .env && \
+    echo "OSS_ACCESS_KEY_SECRET=${OSS_ACCESS_KEY_SECRET}" >> .env && \
+    echo "OSS_BUCKET=${OSS_BUCKET}" >> .env && \
+    echo "OSS_REGION=${OSS_REGION}" >> .env
 
 # Copy source code
 COPY . .
