@@ -18,6 +18,7 @@ export interface AgentState {
   requestMetadata?: {
     timestamp: number
     ip?: string
+    memoryContext?: string // Memory lookup result for logging
   }
 }
 
@@ -30,5 +31,5 @@ export const agentStateAnnotation = Annotation.Root({
   conversationId: Annotation<string>(),
   systemPrompt: Annotation<string | undefined>(),
   modelName: Annotation<string | undefined>(),
-  requestMetadata: Annotation<{ timestamp: number; ip?: string } | undefined>(),
+  requestMetadata: Annotation<{ timestamp: number; ip?: string; memoryContext?: string } | undefined>(),
 })

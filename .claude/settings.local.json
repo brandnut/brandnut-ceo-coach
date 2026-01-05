@@ -72,7 +72,8 @@
       "Bash(/tmp/test.txt)",
       "Bash(timeout 2s curl:*)",
       "Bash(timeout 30s curl:*)",
-      "Bash(bash:*)"
+      "Bash(bash:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

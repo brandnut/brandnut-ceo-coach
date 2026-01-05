@@ -1,11 +1,12 @@
 /**
  * Preprocess Node
  *
- * Pre-LLM hooks: system prompt injection, request logging, etc.
+ * Pre-LLM hooks: system prompt injection, memory lookup, request logging, etc.
  */
 
-import { SystemMessage } from '@langchain/core/messages'
+import { SystemMessage, HumanMessage } from '@langchain/core/messages'
 import { AgentState } from '../state'
+import { searchMemory, formatMemoryContext } from '@/lib/memory/client'
 
 export async function preprocessNode(state: AgentState): Promise<Partial<AgentState>> {
   console.log('[Preprocess] Starting preprocessing', {
@@ -36,10 +37,42 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
     }
   }
 
-  // 3. Future: rate limiting, input validation, etc.
+  // 3. Memory lookup (pre-LLM) - inject into HumanMessage
+  let memoryContext = ''
+  if (state.userId && state.conversationId) {
+    // Get the last user message as query
+    const lastMessage = messages[messages.length - 1]
+    if (lastMessage && lastMessage.constructor.name === 'HumanMessage') {
+      const query = typeof lastMessage.content === 'string' ? lastMessage.content : ''
+
+      if (query) {
+        const memoryData = await searchMemory(state.userId, state.conversationId, query)
+
+        if (memoryData) {
+          memoryContext = formatMemoryContext(memoryData)
+
+          if (memoryContext) {
+            // Insert memory context directly into the HumanMessage content
+            const augmentedContent = `${memoryContext}\n---\n\n${query}`
+            messages[messages.length - 1] = new HumanMessage(augmentedContent)
+
+            console.log('[Preprocess] Injected memory context into HumanMessage:', {
+              memories: memoryData.memory_detail_list.length,
+              preferences: memoryData.preference_detail_list.length,
+            })
+          }
+        }
+      }
+    }
+  }
+
+  // 4. Future: rate limiting, input validation, etc.
 
   return {
     messages,
-    requestMetadata,
+    requestMetadata: {
+      ...requestMetadata,
+      memoryContext, // Store for logging purposes
+    },
   }
 }
