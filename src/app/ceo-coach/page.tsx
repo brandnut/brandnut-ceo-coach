@@ -190,7 +190,7 @@ export default function ChatPage() {
   const getCurrentConversationName = () => {
     if (!currentConvId) return undefined;
     const conv = conversations.find((c) => c.id === currentConvId);
-    return conv?.name || undefined;
+    return conv?.title || "新对话";
   };
 
   const loadConversation = async (convId: string) => {
@@ -474,6 +474,40 @@ export default function ChatPage() {
                     msg.id === tempAssistantId ? data.message : msg
                   )
                 );
+
+                // Auto-generate title if conversation has no title
+                if (currentConvId) {
+                  const currentConv = conversations.find((c) => c.id === currentConvId);
+                  if (!currentConv?.title) {
+                    // Generate title in background
+                    (async () => {
+                      try {
+                        const headers = {
+                          ...getAuthHeaders(storage, storageKeys),
+                          "Content-Type": "application/json",
+                        };
+                        const response = await fetch(
+                          getApiUrl(`/api/agent/conversations/${currentConvId}/generate-title`),
+                          {
+                            method: "POST",
+                            headers,
+                          }
+                        );
+                        if (response.ok) {
+                          const { title } = await response.json();
+                          // Update conversation in local state
+                          setConversations((prev) =>
+                            prev.map((c) =>
+                              c.id === currentConvId ? { ...c, title } : c
+                            )
+                          );
+                        }
+                      } catch (error) {
+                        console.error("Failed to generate title:", error);
+                      }
+                    })();
+                  }
+                }
               } else if (currentEvent === "error") {
                 console.error("Stream error:", data.error);
                 setMessages((prev) =>
@@ -580,7 +614,7 @@ export default function ChatPage() {
         <Conversations
           items={conversations.map((conv) => ({
             key: conv.id,
-            label: conv.name,
+            label: conv.title || "新对话",
           }))}
           activeKey={currentConvId || undefined}
           onActiveChange={(key) => loadConversation(key)}
