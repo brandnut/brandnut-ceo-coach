@@ -89,6 +89,8 @@ export interface OrganizationChatConfig {
   organization_id: string;
   chat_api_url: string;
   chat_api_key: string;
+  system_prompt?: string;
+  model_name?: string;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -98,6 +100,8 @@ export interface OrganizationChatConfig {
 export interface UserChatConfig {
   chat_api_url: string;
   chat_api_key: string;
+  system_prompt?: string;
+  model_name?: string;
   organization_name: string;
   organization_id: string;
 }

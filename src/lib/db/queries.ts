@@ -124,6 +124,8 @@ export async function getUserChatConfig(userId: string, organizationId?: string)
         organization_id,
         chat_api_key,
         chat_api_url,
+        system_prompt,
+        model_name,
         is_active,
         created_at,
         updated_at
@@ -159,6 +161,8 @@ export async function getOrganizationChatConfig(organizationId: string): Promise
         organization_id,
         chat_api_url,
         chat_api_key,
+        system_prompt,
+        model_name,
         is_active,
         created_at,
         updated_at
