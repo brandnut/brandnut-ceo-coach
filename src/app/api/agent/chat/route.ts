@@ -18,6 +18,7 @@ import {
 } from '@/lib/db/agent-queries'
 import { getUserChatConfig } from '@/lib/db/queries'
 import { streamChatResponseGraph } from '@/lib/agent/chat'
+import { agentConfig } from '@/config/app'
 import { ChatRequest } from '@/types/agent'
 
 export async function POST(request: NextRequest) {
@@ -61,8 +62,8 @@ export async function POST(request: NextRequest) {
     // 4. Save user message immediately (eliminates consistency issues)
     const userMessage = await createMessage(convId, 'user', message, attachments)
 
-    // 5. Load conversation history
-    const history = await getConversationMessages(convId)
+    // 5. Load conversation history (limit to recent rounds to prevent context explosion)
+    const history = await getConversationMessages(convId, agentConfig.maxConversationRounds * 2)
 
     // 6. Get organization chat config (system prompt + model)
     const chatConfig = await getUserChatConfig(authResult.user.id)

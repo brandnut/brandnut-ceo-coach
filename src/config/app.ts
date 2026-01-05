@@ -152,3 +152,7 @@ export const appInfo = {
    title: "品核 AI CEO 教练",
    description: "懂企业、懂你的贴身 AI 顾问",
 };
+// Agent 配置
+export const agentConfig = {
+  maxConversationRounds: 10, // 限制对话轮数，防止上下文爆炸 (10轮 = ~20条消息)
+};

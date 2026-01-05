@@ -45,3 +45,4 @@ src-old
 generate-token.js
 store-new-token.js
 scripts/migrations/
+tsconfig.tsbuildinfo
