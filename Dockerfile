@@ -25,6 +25,7 @@ ARG OSS_ACCESS_KEY_ID
 ARG OSS_ACCESS_KEY_SECRET
 ARG OSS_BUCKET
 ARG OSS_REGION
+ARG MEMOS_API_KEY
 
 # Create .env file from build arguments
 RUN echo "DATABASE_URL=${DATABASE_URL}" > .env && \
@@ -41,7 +42,8 @@ RUN echo "DATABASE_URL=${DATABASE_URL}" > .env && \
     echo "OSS_ACCESS_KEY_ID=${OSS_ACCESS_KEY_ID}" >> .env && \
     echo "OSS_ACCESS_KEY_SECRET=${OSS_ACCESS_KEY_SECRET}" >> .env && \
     echo "OSS_BUCKET=${OSS_BUCKET}" >> .env && \
-    echo "OSS_REGION=${OSS_REGION}" >> .env
+    echo "OSS_REGION=${OSS_REGION}" >> .env && \
+    echo "MEMOS_API_KEY=${MEMOS_API_KEY}" >> .env
 
 # Copy source code
 COPY . .
