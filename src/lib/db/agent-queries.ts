@@ -101,7 +101,7 @@ export async function getConversationMessages(
 
     const result = await client.query(query, [conversationId, limit])
 
-    return result.rows.map((row) => {
+    return result.rows.map((row: any) => {
       // Add display_name to tool_calls
       const tool_calls = row.tool_calls
         ? row.tool_calls.map((tc: any) => ({
@@ -245,7 +245,7 @@ export async function getUserConversations(
 
     const result = await client.query(query, [userId, limit, offset])
 
-    const conversations = result.rows.map((row) => ({
+    const conversations = result.rows.map((row: any) => ({
       id: row.id,
       userId: row.user_id,
       title: row.title,

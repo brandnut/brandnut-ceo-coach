@@ -237,6 +237,39 @@ export default function ChatPage() {
     abortControllerRef.current = null;
   };
 
+
+  const uploadFile = async ({
+    file,
+    onProgress,
+    onSuccess,
+    onError,
+  }: {
+    file: File;
+    onProgress: (percent: number) => void;
+    onSuccess: (response: any) => void;
+    onError: (error: Error) => void;
+  }) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const headers = getAuthHeaders(storage, storageKeys);
+      const response = await fetch(getApiUrl("/api/upload"), {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      onSuccess(data);
+    } catch (error) {
+      onError(error as Error);
+    }
+  };
   const handleFileUpload = (file: File): boolean => {
     console.log("handleFileUpload called with:", file.name, file.size);
     const uid = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${

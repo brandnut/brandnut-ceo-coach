@@ -36,6 +36,7 @@ export async function* streamAgentResponse(
   console.log('[Stream] Starting graph execution')
 
   // Use streamEvents to get all events
+  // @ts-expect-error - LangGraph type compatibility issue with AgentState index signature
   const stream = graph.streamEvents(initialState, {
     version: 'v2',
   })
@@ -120,7 +121,8 @@ export async function* streamAgentResponse(
   // Fallback: if no streaming chunks, get final result
   if (!hasYielded) {
     console.log('[Stream] No streaming events, using final result')
-    const result = await graph.invoke(initialState)
+    // @ts-expect-error - LangGraph type compatibility issue
+    const result = await graph.invoke(initialState) as AgentState
     const lastMessage = result.messages[result.messages.length - 1]
     if (lastMessage?.content && typeof lastMessage.content === 'string') {
       yield {

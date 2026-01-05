@@ -108,7 +108,7 @@ export function convertToLangChainMessages(
  */
 export async function* streamChatResponseGraph(
   messages: Message[],
-  newAttachments?: Attachment[],
+  newAttachments: Attachment[],
   options: {
     userId: string
     conversationId: string
@@ -131,6 +131,7 @@ export async function* streamChatResponseGraph(
   // Create and run graph
   const graph = createAgentGraph()
 
+  // @ts-expect-error - LangGraph type compatibility issue with CompiledStateGraph generics
   for await (const event of streamAgentResponse(graph, initialState)) {
     if (event.type === 'text') {
       // Yield text chunks as strings (for backward compatibility)

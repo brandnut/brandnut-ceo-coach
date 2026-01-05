@@ -70,7 +70,10 @@ export async function POST(request: NextRequest) {
     const systemPrompt = chatConfig?.system_prompt || undefined
     const modelName = chatConfig?.model_name || undefined
 
-    // 7. Stream response
+    // 7. Extract userId for closure (TypeScript type narrowing doesn't cross async boundaries)
+    const userId = authResult.user.id
+
+    // 8. Stream response
     const encoder = new TextEncoder()
 
     const stream = new ReadableStream({
@@ -93,8 +96,8 @@ export async function POST(request: NextRequest) {
 
           // Stream AI response with abort handling
           try {
-            for await (const delta of streamChatResponseGraph(history, attachments, {
-              userId: authResult.user.id,
+            for await (const delta of streamChatResponseGraph(history, attachments || [], {
+              userId,
               conversationId: convId,
               modelName,
               systemPrompt,

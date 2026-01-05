@@ -53,7 +53,7 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
 
           if (memoryContext) {
             // Insert memory context directly into the HumanMessage content
-            const augmentedContent = `${memoryContext}\n---\n\n${query}`
+            const augmentedContent = `${memoryContext}\n---\n\n ${query}`
             messages[messages.length - 1] = new HumanMessage(augmentedContent)
 
             console.log('[Preprocess] Injected memory context into HumanMessage:', {
