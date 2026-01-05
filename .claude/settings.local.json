@@ -73,7 +73,9 @@
       "Bash(timeout 2s curl:*)",
       "Bash(timeout 30s curl:*)",
       "Bash(bash:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)"
     ],
     "deny": [],
     "ask": []

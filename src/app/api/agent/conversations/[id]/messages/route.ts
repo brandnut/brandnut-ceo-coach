@@ -10,7 +10,7 @@ import { getConversation, getConversationMessages } from '@/lib/db/agent-queries
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Authentication
@@ -20,7 +20,7 @@ export async function GET(
       return createAuthErrorResponse('Unauthorized', authResult.error || 'INVALID_TOKEN')
     }
 
-    const conversationId = params.id
+    const { id: conversationId } = await params
 
     // Verify conversation exists and belongs to user
     const conversation = await getConversation(conversationId, authResult.user.id)

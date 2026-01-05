@@ -23,7 +23,7 @@ if (!OPENROUTER_API_KEY) {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 1. Authentication
@@ -33,7 +33,7 @@ export async function POST(
       return createAuthErrorResponse('Unauthorized', authResult.error || 'INVALID_TOKEN')
     }
 
-    const conversationId = params.id
+    const { id: conversationId } = await params
 
     // 2. Verify conversation exists and belongs to user
     const conversation = await getConversation(conversationId, authResult.user.id)
