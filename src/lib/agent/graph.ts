@@ -10,12 +10,13 @@ import { agentStateAnnotation, AgentState } from './state'
 import { preprocessNode } from './nodes/preprocess'
 import { agentNode } from './nodes/agent'
 import { toolsNode } from './nodes/tools'
+import { postprocessNode } from './nodes/postprocess'
 
 /**
  * Router: Check if agent wants to use tools
  * Inlined from router.ts for simplicity
  */
-function shouldContinue(state: AgentState): 'continue' | 'end' {
+function shouldContinue(state: AgentState): 'continue' | 'postprocess' {
   const lastMessage = state.messages[state.messages.length - 1]
 
   if (lastMessage._getType() === 'ai') {
@@ -29,8 +30,8 @@ function shouldContinue(state: AgentState): 'continue' | 'end' {
     }
   }
 
-  console.log('[Router] No tool calls, ending...')
-  return 'end'
+  console.log('[Router] No tool calls, moving to postprocess...')
+  return 'postprocess'
 }
 
 /**
@@ -42,19 +43,23 @@ export function createAgentGraph() {
     .addNode('preprocess', preprocessNode)
     .addNode('agent', agentNode)
     .addNode('tools', toolsNode)
+    .addNode('postprocess', postprocessNode)
 
     // Linear flow: start → preprocess → agent
     .addEdge('__start__', 'preprocess')
     .addEdge('preprocess', 'agent')
 
-    // Conditional flow: agent → (continue to tools OR end)
+    // Conditional flow: agent → (continue to tools OR postprocess)
     .addConditionalEdges('agent', shouldContinue, {
       continue: 'tools', // If agent called tools → execute tools
-      end: END, // If no tool calls → end (removed postprocess)
+      postprocess: 'postprocess', // If no tool calls → save to memory
     })
 
     // Loop: tools → agent (for next round)
     .addEdge('tools', 'agent')
+
+    // Termination: postprocess → END
+    .addEdge('postprocess', END)
 
   return graph.compile()
 }

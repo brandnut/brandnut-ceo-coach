@@ -28,6 +28,16 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
     return {}
   }
 
+  // Extract original user message before augmentation
+  let originalUserMessage: string | undefined = undefined
+  if (state.messages.length > 0) {
+    const lastMsg = state.messages[state.messages.length - 1]
+    const content = lastMsg.content
+    if (typeof content === 'string') {
+      originalUserMessage = content
+    }
+  }
+
   const messages: Array<SystemMessage | HumanMessage> = []
 
   // 2. Inject system prompt with timestamp if provided
@@ -93,5 +103,6 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
       ...requestMetadata,
       memoryContext,
     },
+    originalUserMessage,
   }
 }

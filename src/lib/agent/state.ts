@@ -20,6 +20,8 @@ export interface AgentState {
     ip?: string
     memoryContext?: string // Memory lookup result for logging
   }
+  // Original user message (before memory augmentation)
+  originalUserMessage?: string
 }
 
 export const agentStateAnnotation = Annotation.Root({
@@ -38,4 +40,5 @@ export const agentStateAnnotation = Annotation.Root({
   systemPrompt: Annotation<string | undefined>(),
   modelName: Annotation<string | undefined>(),
   requestMetadata: Annotation<{ timestamp: number; ip?: string; memoryContext?: string } | undefined>(),
+  originalUserMessage: Annotation<string | undefined>(),
 })

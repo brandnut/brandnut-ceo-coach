@@ -1,13 +1,14 @@
 /**
  * Tools Node
  *
- * Uses LangGraph's ToolNode instead of custom implementation.
+ * Uses LangGraph's ToolNode with context injection
  */
 
 import { ToolNode } from '@langchain/langgraph/prebuilt'
 import { tool } from '@langchain/core/tools'
 import { z } from 'zod'
 import { AgentState } from '../state'
+import { loggedFetch } from '@/lib/http/logged-client'
 
 const BOCHA_API_KEY = process.env.BOCHA_API_KEY
 const BOCHA_API_URL = 'https://api.bocha.cn/v1/web-search'
@@ -44,13 +45,13 @@ async function bochaSearch(args: {
   summary?: boolean
   freshness?: string
   count?: number
-}): Promise<string> {
+}, userId: string, conversationId: string): Promise<string> {
   if (!BOCHA_API_KEY) {
     return 'Error: BOCHA_API_KEY not configured'
   }
 
   try {
-    const response = await fetch(BOCHA_API_URL, {
+    const response = await loggedFetch(BOCHA_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -62,6 +63,11 @@ async function bochaSearch(args: {
         freshness: args.freshness || 'noLimit',
         count: Math.min(args.count || 10, 50),
       }),
+      logContext: {
+        userId,
+        conversationId,
+        requestType: 'tool_use' as const,
+      },
     })
 
     if (!response.ok) {
@@ -108,30 +114,35 @@ async function bochaSearch(args: {
 }
 
 /**
- * Tool definitions for LangChain using structured tool
+ * Create tools with context (closure)
  */
-export const tools = [
-  tool(
-    async ({ query, summary, freshness, count }) => {
-      return await bochaSearch({ query, summary, freshness, count })
-    },
-    {
-      name: 'bocha_search',
-      description:
-        '从博查搜索网页信息和网页链接。搜索结果准确、完整，适合查询实时信息、新闻、资料等。' +
-        '使用场景: 当用户询问需要实时信息、最新数据、新闻、公开资料时使用。' +
-        '\n\n重要提示：' +
-        '\n- 根据查询需求设置 freshness 参数（oneDay/oneWeek/oneMonth/oneYear）来限制搜索时间范围' +
-        '\n- 根据需要的结果数量设置 count 参数（默认10条，最多50条）',
-      schema: z.object({
-        query: z.string().describe('搜索关键字或语句'),
-        summary: z.boolean().optional().describe('是否在搜索结果中包含摘要'),
-        freshness: z.enum(['noLimit', 'oneDay', 'oneWeek', 'oneMonth', 'oneYear']).optional().describe('搜索时间范围'),
-        count: z.number().min(1).max(50).optional().describe('返回结果数量'),
-      }),
-    }
-  ),
-]
+function createTools(userId: string, conversationId: string) {
+  return [
+    tool(
+      async ({ query, summary, freshness, count }) => {
+        return await bochaSearch({ query, summary, freshness, count }, userId, conversationId)
+      },
+      {
+        name: 'bocha_search',
+        description:
+          '从博查搜索网页信息和网页链接。搜索结果准确、完整，适合查询实时信息、新闻、资料等。' +
+          '使用场景: 当用户询问需要实时信息、最新数据、新闻、公开资料时使用。' +
+          '\n\n重要提示：' +
+          '\n- 根据查询需求设置 freshness 参数（oneDay/oneWeek/oneMonth/oneYear）来限制搜索时间范围' +
+          '\n- 根据需要的结果数量设置 count 参数（默认10条，最多50条）',
+        schema: z.object({
+          query: z.string().describe('搜索关键字或语句'),
+          summary: z.boolean().optional().describe('是否在搜索结果中包含摘要'),
+          freshness: z.enum(['noLimit', 'oneDay', 'oneWeek', 'oneMonth', 'oneYear']).optional().describe('搜索时间范围'),
+          count: z.number().min(1).max(50).optional().describe('返回结果数量'),
+        }),
+      }
+    ),
+  ]
+}
+
+// Export default tools (for agent initialization)
+export const tools = createTools('', '')
 
 /**
  * Tool registry for display names (for frontend)
@@ -141,6 +152,17 @@ export const TOOL_REGISTRY: Record<string, { display_name: string }> = {
 }
 
 /**
- * Tools node using LangGraph's built-in ToolNode
+ * Tools node using LangGraph's ToolNode
  */
-export const toolsNode = new ToolNode(tools)
+export async function toolsNode(state: AgentState): Promise<Partial<AgentState>> {
+  // Create tools with context (closure captures userId and conversationId)
+  const toolsWithContext = createTools(state.userId, state.conversationId)
+
+  // Create ToolNode with context-aware tools
+  const node = new ToolNode(toolsWithContext)
+
+  // ToolNode expects { messages: BaseMessage[] }
+  const result = await node.invoke({ messages: state.messages })
+
+  return { messages: result.messages }
+}

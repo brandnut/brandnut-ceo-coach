@@ -4,6 +4,8 @@
  * Retrieves user's long-term memory and preferences from memos.memtensor.cn
  */
 
+import { loggedFetch } from '@/lib/http/logged-client'
+
 const MEMOS_API_KEY = process.env.MEMOS_API_KEY
 const MEMOS_API_URL = 'https://memos.memtensor.cn/api/openmem/v1/search/memory'
 
@@ -56,7 +58,7 @@ export async function searchMemory(
   }
 
   try {
-    const response = await fetch(MEMOS_API_URL, {
+    const response = await loggedFetch(MEMOS_API_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Token ${MEMOS_API_KEY}`,
@@ -67,6 +69,11 @@ export async function searchMemory(
         conversation_id: conversationId,
         query,
       }),
+      logContext: {
+        userId,
+        conversationId,
+        requestType: 'memory_search',
+      },
     })
 
     if (!response.ok) {
@@ -85,6 +92,56 @@ export async function searchMemory(
   } catch (error) {
     console.error('Memory search exception:', error)
     return null
+  }
+}
+
+/**
+ * Save conversation to Memtensor
+ */
+export async function addMessage(
+  userId: string,
+  conversationId: string,
+  userMessage: string,
+  assistantMessage: string
+): Promise<boolean> {
+  if (!MEMOS_API_KEY) {
+    console.warn('[Memory] MEMOS_API_KEY not configured, skipping save')
+    return false
+  }
+
+  try {
+    const response = await loggedFetch('https://memos.memtensor.cn/api/openmem/v1/add/message', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${MEMOS_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        conversation_id: conversationId,
+        messages: [
+          { role: 'user', content: userMessage },
+          { role: 'assistant', content: assistantMessage },
+        ],
+      }),
+      logContext: {
+        userId,
+        conversationId,
+        requestType: 'memory_add',
+      },
+    })
+
+    if (!response.ok) {
+      console.error('[Memory] Add message failed:', response.status, response.statusText)
+      return false
+    }
+
+    const result = await response.json()
+    console.log('[Memory] Conversation saved:', result)
+    return true
+  } catch (error) {
+    console.error('[Memory] Add message exception:', error)
+    return false
   }
 }
 
@@ -108,11 +165,6 @@ export function formatMemoryContext(data: MemorySearchResponse['data']): string 
       .map((p) => `- ${p.preference} (${p.reasoning})`)
       .join('\n')
     parts.push(`用户的偏好记忆：\n${preferences}`)
-  }
-
-  // Add preference note if available
-  if (data.preference_note) {
-    parts.push(`偏好使用说明：${data.preference_note}`)
   }
 
   return parts.join('\n\n')
