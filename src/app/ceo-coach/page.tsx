@@ -495,80 +495,86 @@ export default function ChatPage() {
       const decoder = new TextDecoder("utf-8");
       let buffer = "";
       let assistantContent = "";
+      const MIN_CHUNK_SIZE = 64; // Accumulate threshold to reduce fragment processing
 
-      // Simple SSE parsing
+      // SSE parsing with buffer accumulation
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
 
-        // Keep last partial line in buffer
-        buffer = lines.pop() || "";
+        // Only process when buffer reaches threshold or has double newline
+        if (buffer.length >= MIN_CHUNK_SIZE || buffer.includes('\n\n')) {
+          const lines = buffer.split("\n");
 
-        let currentEvent = "";
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i].trim();
+          // Keep last partial line in buffer
+          buffer = lines.pop() || "";
 
-          if (line.startsWith("event:")) {
-            currentEvent = line.substring(6).trim();
-          } else if (line.startsWith("data:") && currentEvent) {
-            try {
-              const data = JSON.parse(line.substring(5).trim());
+          let currentEvent = "";
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
 
-              if (currentEvent === "conversation" && data.conversationId) {
-                // New conversation created
-                finalConvId = data.conversationId;
-                setCurrentConvId(data.conversationId);
-                loadConversations();
-                closeMobileSidebarIfNeeded();
-              } else if (currentEvent === "delta" && data.text) {
-                // Streaming text chunk
-                assistantContent += data.text;
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === tempAssistantId
-                      ? { ...msg, content: assistantContent }
-                      : msg
-                  )
-                );
-              } else if (currentEvent === "done" && data.message) {
-                // Final message from server (replace temp message with real one)
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === tempAssistantId ? data.message : msg
-                  )
-                );
-              } else if (currentEvent === "error") {
-                console.error("Stream error:", data.error);
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === tempAssistantId
-                      ? { ...msg, content: `⚠️ 错误：${data.error}` }
-                      : msg
-                  )
-                );
-              } else if (currentEvent === "tool_call" && data.tools) {
-                // Tool execution started - update existing assistant message
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === tempAssistantId
-                      ? { ...msg, tool_calls: data.tools }
-                      : msg
-                  )
-                );
-              } else if (currentEvent === "tool_result") {
-                // Tool execution completed (text will stream via delta events)
-                console.log("[Tool Result]", data.tool_display_name, data.tool_call_id);
+            if (line.startsWith("event:")) {
+              currentEvent = line.substring(6).trim();
+            } else if (line.startsWith("data:") && currentEvent) {
+              try {
+                const data = JSON.parse(line.substring(5).trim());
+
+                if (currentEvent === "conversation" && data.conversationId) {
+                  // New conversation created
+                  finalConvId = data.conversationId;
+                  setCurrentConvId(data.conversationId);
+                  loadConversations();
+                  closeMobileSidebarIfNeeded();
+                } else if (currentEvent === "delta" && data.text) {
+                  // Streaming text chunk
+                  assistantContent += data.text;
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === tempAssistantId
+                        ? { ...msg, content: assistantContent }
+                        : msg
+                    )
+                  );
+                } else if (currentEvent === "done" && data.message) {
+                  // Final message from server (replace temp message with real one)
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === tempAssistantId ? data.message : msg
+                    )
+                  );
+                } else if (currentEvent === "error") {
+                  console.error("Stream error:", data.error);
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === tempAssistantId
+                        ? { ...msg, content: `⚠️ 错误：${data.error}` }
+                        : msg
+                    )
+                  );
+                } else if (currentEvent === "tool_call" && data.tools) {
+                  // Tool execution started - update existing assistant message
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === tempAssistantId
+                        ? { ...msg, tool_calls: data.tools }
+                        : msg
+                    )
+                  );
+                } else if (currentEvent === "tool_result") {
+                  // Tool execution completed (text will stream via delta events)
+                  console.log("[Tool Result]", data.tool_display_name, data.tool_call_id);
+                }
+
+                currentEvent = ""; // Reset after processing
+              } catch (parseError) {
+                console.error("Failed to parse SSE data:", parseError);
               }
-
-              currentEvent = ""; // Reset after processing
-            } catch (parseError) {
-              console.error("Failed to parse SSE data:", parseError);
             }
           }
         }
+        // If buffer not ready, continue reading (reduces frequent processing)
       }
     } catch (error: unknown) {
       // Don't show error if aborted by user
