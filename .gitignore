@@ -38,3 +38,10 @@ coverage
 
 # Misc
 src-old
+
+# Temporary scripts and files
+*.sh
+*.tar
+generate-token.js
+store-new-token.js
+scripts/migrations/
