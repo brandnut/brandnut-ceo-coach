@@ -45,16 +45,18 @@ export async function GET(request: NextRequest) {
     // 3. Get dashboard (may not exist)
     let dashboard = await getUserDashboard(user.id, org.id)
 
-    // 4. If doesn't exist, generate and wait
+    // 4. If doesn't exist, return empty and trigger background generation
     if (!dashboard) {
-      const questions = await generateDashboardQuestions(
-        user.id,
-        org.id
-      )
-      await upsertDashboard(user.id, org.id, questions)
+      await setGeneratingFlag(user.id, org.id, true)
+
+      // Fire-and-forget background generation
+      generateInBackground(user.id, org.id).catch((error) => {
+        console.error('Background generation failed:', error)
+      })
 
       return NextResponse.json({
-        questions,
+        questions: {},
+        isGenerating: true,
       })
     }
 

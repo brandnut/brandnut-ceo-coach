@@ -50,7 +50,7 @@ export async function generateDashboardQuestions(
     : '暂无用户记忆'
 
   // 3. Build prompt
-  const prompt = `你是CEO教练。为这位企业家生成7个分类的启发性问题，这些问题是**用户可以问AI的问题**，用于开启对话。
+  const prompt = `你是CEO教练。为这位企业家生成9个分类的启发性问题，这些问题是**用户可以问AI的问题**，用于开启对话。
 
 组织背景：
 ${systemPrompt.slice(0, 500)}
@@ -58,7 +58,7 @@ ${systemPrompt.slice(0, 500)}
 用户记忆：
 ${memoryContext}
 
-分类：战略、市场营销、产品、财务、组织、自我剖析
+分类：战略、营销、产品、财务、组织、人事、销售、运营、自我成长
 要求：
 - 每个分类3-5个问题
 - 这些问题是用户可以问AI的，例如："如何判断...？"、"XX和YY该选哪个？"、"怎样做才能...？"
@@ -69,11 +69,14 @@ ${memoryContext}
 返回JSON：
 {
   "战略": ["如何在规模经济和小而美之间找到平衡点？", "明年的战略重点该选哪个方向？"],
-  "市场营销": ["中腰部达人ROI好但犹豫的原因是什么？", "如何平衡抖音的短期数据和长期品牌？"],
+  "营销": ["中腰部达人ROI好但犹豫的原因是什么？", "如何平衡抖音的短期数据和长期品牌？"],
   "产品": [...],
   "财务": [...],
   "组织": [...],
-  "自我剖析": [...]
+  "人事": [...],
+  "销售": [...],
+  "运营": [...],
+  "自我成长": [...]
 }`
 
   // 4. Call GLM 4.5 Air with structured output
@@ -100,7 +103,7 @@ ${memoryContext}
                 type: 'array',
                 items: { type: 'string' },
               },
-              市场营销: {
+              营销: {
                 type: 'array',
                 items: { type: 'string' },
               },
@@ -116,12 +119,24 @@ ${memoryContext}
                 type: 'array',
                 items: { type: 'string' },
               },
-              自我剖析: {
+              人事: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+              销售: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+              运营: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+              自我成长: {
                 type: 'array',
                 items: { type: 'string' },
               },
             },
-            required: ['战略', '市场营销', '产品', '财务', '组织', '自我剖析'],
+            required: ['战略', '营销', '产品', '财务', '组织', '人事', '销售', '运营', '自我成长'],
             additionalProperties: false,
           },
         },

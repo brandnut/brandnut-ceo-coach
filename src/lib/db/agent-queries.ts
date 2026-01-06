@@ -262,7 +262,7 @@ export async function getUserConversations(
  */
 export async function createAgentLog(params: {
   userId: string
-  conversationId: string
+  conversationId: string | null
   modelName: string
   request: any
   response: any

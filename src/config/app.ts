@@ -132,8 +132,10 @@ export const wpgWelcomeQuestions = {
 
 export const welcomeText = {
    greeting: "👋",
-   startNewConversation: "开始新对话",
+   startNewConversation: "开启新对话",
    suggestedQuestionsTitle: "开启新对话，可以从以下问题开始",
+   dashboardDescription: "基于你的企业和记忆，每周专属生成，其他人不可见",
+   dashboardEmptyHint: "首次开启对话后，你关心的话题将在这里出现",
 };
 
 export const difyInputs = {

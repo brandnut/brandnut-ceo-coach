@@ -29,6 +29,7 @@ import type {
 } from "@/types/agent";
 import CustomStreamdown from "@/components/CustomStreamdown";
 import { PlusOutlined } from "@ant-design/icons";
+import { Sparkles } from "lucide-react";
 import type { AttachmentFile } from "@/types";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { welcomeText, guestMode } from "@/config/app";
@@ -79,11 +80,9 @@ export default function ChatPage() {
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [dashboardQuestions, setDashboardQuestions] = useState<Record<
-    string,
-    string[]
-  > | null>(null);
-  const [isLoadingDashboard, setIsLoadingDashboard] = useState(false);
+  const [dashboardQuestions, setDashboardQuestions] = useState<
+    Record<string, string[]> | null | undefined
+  >(undefined);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -206,8 +205,6 @@ export default function ChatPage() {
   const loadDashboard = async () => {
     if (!isAuthenticated) return;
 
-    setIsLoadingDashboard(true);
-
     try {
       const headers = {
         ...getAuthHeaders(storage, storageKeys),
@@ -219,6 +216,7 @@ export default function ChatPage() {
 
       if (!response.ok) {
         console.error("Failed to load dashboard");
+        setDashboardQuestions(null);
         return;
       }
 
@@ -226,8 +224,7 @@ export default function ChatPage() {
       setDashboardQuestions(data.questions);
     } catch (error) {
       console.error("Error loading dashboard:", error);
-    } finally {
-      setIsLoadingDashboard(false);
+      setDashboardQuestions(null);
     }
   };
 
@@ -787,59 +784,74 @@ export default function ChatPage() {
               ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full gap-6 text-muted-foreground">
                   <span className="text-4xl">{welcomeText.greeting}</span>
-                  {dashboardQuestions &&
-                    Object.keys(dashboardQuestions).length > 0 && (
+                  {dashboardQuestions === undefined ? (
+                    <div className="flex flex-col items-center gap-4">
+                      <p className="text-base font-medium">
+                        {welcomeText.startNewConversation}
+                      </p>
+                      <span className="spinner-large"></span>
+                    </div>
+                  ) : dashboardQuestions === null ? (
+                    <div className="flex flex-col items-center gap-4">
+                      <p className="text-base font-medium">
+                        {welcomeText.startNewConversation}
+                      </p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 select-none">
+                        <Sparkles size={12} />
+                        <span>{welcomeText.dashboardEmptyHint}</span>
+                      </p>
+                    </div>
+                  ) : (
+                    <>
                       <p className="text-base font-medium">
                         {welcomeText.suggestedQuestionsTitle}
                       </p>
-                    )}
-                  {isLoadingDashboard ? (
-                    <div className="flex flex-col items-center justify-center">
-                      <span className="spinner-large"></span>
-                    </div>
-                  ) : dashboardQuestions &&
-                    Object.keys(dashboardQuestions).length > 0 ? (
-                    <div className="relative w-full max-w-6xl">
-                      <div className="flex flex-col gap-4 w-full overflow-y-auto px-4 pb-10 h-[45vh] sm:h-[60vh]">
-                        <div className="space-y-4">
-                          {Object.entries(dashboardQuestions).map(
-                            ([category, questions]) => (
-                              <div key={category} className="space-y-2">
-                                <h3 className="text-sm font-semibold text-foreground/90">
-                                  {category}
-                                </h3>
-                                <div className="overflow-x-auto">
-                                  <div className="flex gap-2 pb-1">
-                                    {questions.map((question, index) => (
-                                      <div
-                                        key={`${category}-${index}`}
-                                        className="p-2 sm:p-3 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors min-w-[140px] max-w-[140px] sm:min-w-[180px] sm:max-w-[180px] flex-shrink-0 flex items-center justify-center text-center"
-                                        style={{
-                                          boxShadow: "1px 1px 2px #00000014",
-                                        }}
-                                        onClick={() => setInput(question)}
-                                      >
-                                        <span className="text-xs leading-relaxed">
-                                          {question}
-                                        </span>
-                                      </div>
-                                    ))}
+                      <div className="relative w-full max-w-6xl">
+                        <div className="flex flex-col gap-4 w-full overflow-y-auto px-4 pb-10 h-[45vh] sm:h-[60vh]">
+                          <div className="space-y-4">
+                            {Object.entries(dashboardQuestions).map(
+                              ([category, questions]) => (
+                                <div key={category} className="space-y-2">
+                                  <h3 className="text-sm font-semibold text-foreground/90">
+                                    {category}
+                                  </h3>
+                                  <div className="overflow-x-auto">
+                                    <div className="flex gap-2 pb-1">
+                                      {questions.map((question, index) => (
+                                        <div
+                                          key={`${category}-${index}`}
+                                          className="p-2 sm:p-3 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors min-w-[140px] max-w-[140px] sm:min-w-[180px] sm:max-w-[180px] flex-shrink-0 flex items-center justify-center text-center"
+                                          style={{
+                                            boxShadow: "1px 1px 2px #00000014",
+                                          }}
+                                          onClick={() => setInput(question)}
+                                        >
+                                          <span className="text-xs leading-relaxed">
+                                            {question}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            )
-                          )}
+                              )
+                            )}
+                            <p className="text-xs text-muted-foreground text-center pt-2 select-none flex items-center justify-center gap-1">
+                              <Sparkles size={12} />
+                              <span>{welcomeText.dashboardDescription}</span>
+                            </p>
+                          </div>
                         </div>
+                        <div
+                          className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none"
+                          style={{
+                            background:
+                              "linear-gradient(to bottom, transparent, white)",
+                          }}
+                        ></div>
                       </div>
-                      <div
-                        className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none"
-                        style={{
-                          background:
-                            "linear-gradient(to bottom, transparent, white)",
-                        }}
-                      ></div>
-                    </div>
-                  ) : null}
+                    </>
+                  )}
                   {/* <div className="flex justify-center">
                     <button
                       type="button"
