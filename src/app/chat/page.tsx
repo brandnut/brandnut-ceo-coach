@@ -842,9 +842,16 @@ export default function ChatPage() {
                       if (msg.role === "tool") return false;
 
                       // 2. 过滤掉所有 content 为空的消息（包括工具调用中间消息）
+                      // 但是保留正在 streaming 的最后一条 assistant 消息（显示"正在思考"）
+                      const isLastStreamingAssistant =
+                        msg.role === "assistant" &&
+                        isStreaming &&
+                        msg.id === messages[messages.length - 1]?.id;
+
                       if (
                         typeof msg.content === "string" &&
-                        msg.content.trim() === ""
+                        msg.content.trim() === "" &&
+                        !isLastStreamingAssistant
                       ) {
                         return false;
                       }
