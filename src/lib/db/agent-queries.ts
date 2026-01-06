@@ -269,15 +269,16 @@ export async function createAgentLog(params: {
   durationMs: number
   status: 'success' | 'error'
   errorMessage?: string
+  type?: 'main_agent' | 'title_generation' | 'dashboard_generation'
 }): Promise<void> {
   return withClient(async (client) => {
     const query = `
       INSERT INTO agent_logs (
         user_id, conversation_id, model_name,
         request, response,
-        duration_ms, status, error_message
+        duration_ms, status, error_message, type
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     `
 
     await client.query(query, [
@@ -289,6 +290,7 @@ export async function createAgentLog(params: {
       params.durationMs,
       params.status,
       params.errorMessage || null,
+      params.type || 'main_agent',
     ])
   })
 }

@@ -133,7 +133,7 @@ export const wpgWelcomeQuestions = {
 export const welcomeText = {
    greeting: "👋",
    startNewConversation: "开始新对话",
-   suggestedQuestionsTitle: "您可以尝试询问以下问题：",
+   suggestedQuestionsTitle: "开启新对话，可以从以下问题开始",
 };
 
 export const difyInputs = {

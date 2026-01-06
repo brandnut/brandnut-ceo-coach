@@ -28,7 +28,7 @@ import CustomStreamdown from "@/components/CustomStreamdown";
 import { PlusOutlined } from "@ant-design/icons";
 import type { AttachmentFile } from "@/types";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { welcomeQuestions, welcomeText, guestMode } from "@/config/app";
+import { welcomeText, guestMode } from "@/config/app";
 
 // 快捷提示数据集（精简版，通用 CEO 教练场景）
 const QUICK_PROMPTS = [
@@ -67,6 +67,8 @@ export default function ChatPage() {
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [dashboardQuestions, setDashboardQuestions] = useState<Record<string, string[]> | null>(null);
+  const [isLoadingDashboard, setIsLoadingDashboard] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -85,6 +87,7 @@ export default function ChatPage() {
         }
       } else {
         loadConversations();
+        loadDashboard();
 
         // Check if tutorial should be shown
         const tutorialShown = storage.getItem(storageKeys.TUTORIAL_SHOWN);
@@ -182,6 +185,34 @@ export default function ChatPage() {
       }
     } catch (error) {
       console.error("Error deleting conversation:", error);
+    }
+  };
+
+  const loadDashboard = async () => {
+    if (!isAuthenticated) return;
+
+    setIsLoadingDashboard(true);
+
+    try {
+      const headers = {
+        ...getAuthHeaders(storage, storageKeys),
+      };
+
+      const response = await fetch(getApiUrl("/api/agent/dashboard"), {
+        headers,
+      });
+
+      if (!response.ok) {
+        console.error("Failed to load dashboard");
+        return;
+      }
+
+      const data = await response.json();
+      setDashboardQuestions(data.questions);
+    } catch (error) {
+      console.error("Error loading dashboard:", error);
+    } finally {
+      setIsLoadingDashboard(false);
     }
   };
 
@@ -741,28 +772,54 @@ export default function ChatPage() {
               ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full gap-6 text-muted-foreground">
                   <span className="text-4xl">{welcomeText.greeting}</span>
-                  <span className="text-base font-medium">
-                    {welcomeText.startNewConversation}
-                  </span>
-                  {welcomeQuestions.length > 0 ? (
-                    <div className="flex flex-col gap-2 w-full max-w-md">
-                      <p className="text-sm text-center">
-                        {welcomeText.suggestedQuestionsTitle}
-                      </p>
-                      <div className="flex flex-col gap-2 text-sm">
-                        {welcomeQuestions.map((question, index) => (
-                          <div
-                            key={index}
-                            className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors"
-                            onClick={() => setInput(question)}
-                          >
-                            {question}
-                          </div>
-                        ))}
+                  {dashboardQuestions && Object.keys(dashboardQuestions).length > 0 && (
+                    <p className="text-base font-medium">
+                      {welcomeText.suggestedQuestionsTitle}
+                    </p>
+                  )}
+                  {isLoadingDashboard ? (
+                    <div className="flex flex-col items-center justify-center">
+                      <span className="spinner-large"></span>
+                    </div>
+                  ) : dashboardQuestions && Object.keys(dashboardQuestions).length > 0 ? (
+                    <div className="relative w-full max-w-6xl">
+                      <div className="flex flex-col gap-4 w-full overflow-y-auto px-4 pb-16 h-[45vh] sm:h-[60vh]">
+                        <div className="space-y-4">
+                          {Object.entries(dashboardQuestions).map(
+                            ([category, questions]) => (
+                              <div key={category} className="space-y-2">
+                                <h3 className="text-sm font-semibold text-foreground/90">
+                                  {category}
+                                </h3>
+                                <div className="overflow-x-auto">
+                                  <div className="flex gap-2 pb-1">
+                                    {questions.map((question, index) => (
+                                      <div
+                                        key={`${category}-${index}`}
+                                        className="p-2 sm:p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors min-w-[140px] max-w-[140px] sm:min-w-[180px] sm:max-w-[180px] flex-shrink-0 flex items-center justify-center text-center"
+                                        onClick={() => setInput(question)}
+                                      >
+                                        <span className="text-xs leading-relaxed">
+                                          {question}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          )}
+                        </div>
                       </div>
+                      <div
+                        className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none"
+                        style={{
+                          background: 'linear-gradient(to bottom, transparent, white)'
+                        }}
+                      ></div>
                     </div>
                   ) : null}
-                  <div className="flex justify-center">
+                  {/* <div className="flex justify-center">
                     <button
                       type="button"
                       onClick={() => setIsHelpOpen(true)}
@@ -770,7 +827,7 @@ export default function ChatPage() {
                     >
                       查看使用教程
                     </button>
-                  </div>
+                  </div> */}
                 </div>
               ) : (
                 <>

@@ -11,6 +11,7 @@ import {
   getConversation,
   getConversationMessages,
   updateConversationTitle,
+  createAgentLog,
 } from '@/lib/db/agent-queries'
 import { ChatOpenAI } from '@langchain/openai'
 import { HumanMessage, AIMessage } from '@langchain/core/messages'
@@ -92,6 +93,9 @@ ${conversationText}
 请以JSON格式返回：{"title": "你的标题"}`
 
     // 6. Call OpenRouter with structured output (using GLM for cost efficiency)
+    const startTime = Date.now()
+    const modelName = 'z-ai/glm-4.5-air'
+
     const model = new ChatOpenAI({
       modelName: 'z-ai/glm-4.5-air',
       apiKey: OPENROUTER_API_KEY,
@@ -121,19 +125,51 @@ ${conversationText}
       },
     })
 
-    const response = await model.invoke([new HumanMessage(prompt)])
+    try {
+      const response = await model.invoke([new HumanMessage(prompt)])
+      const durationMs = Date.now() - startTime
 
-    // 6. Parse response
-    const result = JSON.parse(response.content as string)
-    const title = result.title.substring(0, 20) // Max 20 chars (8-15 preferred)
+      // 6. Parse response
+      const result = JSON.parse(response.content as string)
+      const title = result.title.substring(0, 20) // Max 20 chars (8-15 preferred)
 
-    // 7. Update conversation title
-    await updateConversationTitle(conversationId, title)
+      // Log to agent_logs
+      await createAgentLog({
+        userId: authResult.user.id,
+        conversationId,
+        modelName,
+        request: { prompt },
+        response: { title },
+        durationMs,
+        status: 'success',
+        type: 'title_generation',
+      }).catch((err) => console.error('Failed to log title generation:', err))
 
-    return NextResponse.json({
-      success: true,
-      title,
-    })
+      // 7. Update conversation title
+      await updateConversationTitle(conversationId, title)
+
+      return NextResponse.json({
+        success: true,
+        title,
+      })
+    } catch (error) {
+      const durationMs = Date.now() - startTime
+
+      // Log error to agent_logs
+      await createAgentLog({
+        userId: authResult.user.id,
+        conversationId,
+        modelName,
+        request: { prompt },
+        response: null,
+        durationMs,
+        status: 'error',
+        errorMessage: error instanceof Error ? error.message : String(error),
+        type: 'title_generation',
+      }).catch((err) => console.error('Failed to log title generation error:', err))
+
+      throw error
+    }
   } catch (error) {
     console.error('Generate title error:', error)
 
