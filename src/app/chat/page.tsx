@@ -797,7 +797,10 @@ export default function ChatPage() {
                                     {questions.map((question, index) => (
                                       <div
                                         key={`${category}-${index}`}
-                                        className="p-2 sm:p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors min-w-[140px] max-w-[140px] sm:min-w-[180px] sm:max-w-[180px] flex-shrink-0 flex items-center justify-center text-center"
+                                        className="p-2 sm:p-3 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors min-w-[140px] max-w-[140px] sm:min-w-[180px] sm:max-w-[180px] flex-shrink-0 flex items-center justify-center text-center"
+                                        style={{
+                                          boxShadow: '1px 1px 2px #00000014'
+                                        }}
                                         onClick={() => setInput(question)}
                                       >
                                         <span className="text-xs leading-relaxed">
