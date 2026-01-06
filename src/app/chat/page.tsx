@@ -6,7 +6,7 @@ import { useApp } from "@/contexts/AppContext";
 import { storage, storageKeys } from "@/lib/storage";
 
 import { Sender, Attachments, Conversations } from "@ant-design/x";
-import { Popover, Upload } from "antd";
+import { Popover, Upload, Button } from "antd";
 import {
   PaperClipOutlined,
   DeleteOutlined,
@@ -25,11 +25,22 @@ import type {
   Attachment,
 } from "@/types/agent";
 import CustomStreamdown from "@/components/CustomStreamdown";
-import { Button } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import type { AttachmentFile } from "@/types";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { welcomeQuestions, welcomeText, guestMode } from "@/config/app";
+
+// 快捷提示数据集（精简版，通用 CEO 教练场景）
+const QUICK_PROMPTS = [
+  {
+    title: "思维框架",
+    prompt: "帮我搜寻合适的思维框架，并解决我当前的问题：",
+  },
+  // {
+  //   title: "记忆回顾",
+  //   prompt: "回顾一下关于我和企业你已经知道了哪些信息？",
+  // },
+];
 
 export default function ChatPage() {
   const [input, setInput] = useState("");
@@ -237,7 +248,6 @@ export default function ChatPage() {
     abortControllerRef.current = null;
   };
 
-
   const uploadFile = async ({
     file,
     onProgress,
@@ -392,9 +402,7 @@ export default function ChatPage() {
         const { title } = await response.json();
         // Update conversation in local state
         setConversations((prev) =>
-          prev.map((c) =>
-            c.id === conversationId ? { ...c, title } : c
-          )
+          prev.map((c) => (c.id === conversationId ? { ...c, title } : c))
         );
       }
     } catch (error) {
@@ -505,7 +513,7 @@ export default function ChatPage() {
         buffer += decoder.decode(value, { stream: true });
 
         // Only process when buffer reaches threshold or has double newline
-        if (buffer.length >= MIN_CHUNK_SIZE || buffer.includes('\n\n')) {
+        if (buffer.length >= MIN_CHUNK_SIZE || buffer.includes("\n\n")) {
           const lines = buffer.split("\n");
 
           // Keep last partial line in buffer
@@ -564,7 +572,11 @@ export default function ChatPage() {
                   );
                 } else if (currentEvent === "tool_result") {
                   // Tool execution completed (text will stream via delta events)
-                  console.log("[Tool Result]", data.tool_display_name, data.tool_call_id);
+                  console.log(
+                    "[Tool Result]",
+                    data.tool_display_name,
+                    data.tool_call_id
+                  );
                 }
 
                 currentEvent = ""; // Reset after processing
@@ -766,70 +778,116 @@ export default function ChatPage() {
                     // 过滤消息：移除 tool 消息和空内容消息
                     const visibleMessages = messages.filter((msg) => {
                       // 1. 过滤掉 tool 类型的消息
-                      if (msg.role === 'tool') return false
+                      if (msg.role === "tool") return false;
 
                       // 2. 过滤掉所有 content 为空的消息（包括工具调用中间消息）
-                      if (typeof msg.content === 'string' && msg.content.trim() === '') {
-                        return false
+                      if (
+                        typeof msg.content === "string" &&
+                        msg.content.trim() === ""
+                      ) {
+                        return false;
                       }
 
-                      return true
-                    })
+                      return true;
+                    });
 
                     return visibleMessages.map((msg, index) => {
-                      const isLastMessage = index === visibleMessages.length - 1;
+                      const isLastMessage =
+                        index === visibleMessages.length - 1;
                       const showLoading =
-                        msg.role === "assistant" && isStreaming && isLastMessage;
+                        msg.role === "assistant" &&
+                        isStreaming &&
+                        isLastMessage;
 
-                    return (
-                      <div key={msg.id} className={`message ${msg.role}`}>
-                        <div className="message-content">
-                          {msg.attachments && msg.attachments.length > 0 && (
-                            <div style={{ marginBottom: "8px" }}>
-                              {msg.attachments.map((file, idx) => (
-                                <Attachments.FileCard
-                                  key={`${msg.id}-file-${idx}`}
-                                  item={{
-                                    uid: `${msg.id}-${idx}`,
-                                    name: file.name,
-                                    type: file.mimeType,
-                                    status: "done",
-                                  }}
-                                  style={{
-                                    backgroundColor: "hsl(var(--muted) / 0.5)",
-                                    border: "1px solid hsl(var(--border))",
-                                  }}
-                                />
-                              ))}
+                      return (
+                        <div key={msg.id} className={`message ${msg.role}`}>
+                          <div className="message-content">
+                            {msg.attachments && msg.attachments.length > 0 && (
+                              <div style={{ marginBottom: "8px" }}>
+                                {msg.attachments.map((file, idx) => (
+                                  <Attachments.FileCard
+                                    key={`${msg.id}-file-${idx}`}
+                                    item={{
+                                      uid: `${msg.id}-${idx}`,
+                                      name: file.name,
+                                      type: file.mimeType,
+                                      status: "done",
+                                    }}
+                                    style={{
+                                      backgroundColor:
+                                        "hsl(var(--muted) / 0.5)",
+                                      border: "1px solid hsl(var(--border))",
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Loading indicator - text changes based on state */}
+                            {showLoading && (
+                              <div className="message-loading">
+                                <span className="spinner"></span>
+                                <span className="loading-text">
+                                  {msg.tool_calls && msg.tool_calls.length > 0
+                                    ? generateToolPlaceholderText(
+                                        msg.tool_calls
+                                      )
+                                    : "正在思考"}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Message content */}
+                            <div className="markdown-body">
+                              <CustomStreamdown>{msg.content}</CustomStreamdown>
                             </div>
-                          )}
-
-                          {/* Loading indicator - text changes based on state */}
-                          {showLoading && (
-                            <div className="message-loading">
-                              <span className="spinner"></span>
-                              <span className="loading-text">
-                                {msg.tool_calls && msg.tool_calls.length > 0
-                                  ? generateToolPlaceholderText(msg.tool_calls)
-                                  : "正在思考"}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Message content */}
-                          <div className="markdown-body">
-                            <CustomStreamdown>{msg.content}</CustomStreamdown>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })})()}
+                      );
+                    });
+                  })()}
                   <div ref={messagesEndRef} />
                 </>
               )}
             </div>
 
             <div className="input-container">
+              {/* 快捷提示按钮 */}
+              <div
+                style={{
+                  marginBottom: "8px",
+                  display: "flex",
+                  gap: "8px",
+                  flexWrap: "wrap",
+                }}
+              >
+                {QUICK_PROMPTS.map((item) => (
+                  <Button
+                    key={item.title}
+                    size="small"
+                    onClick={() => {
+                      setInput(item.prompt);
+                      senderRef.current?.focus();
+                    }}
+                    disabled={isStreaming}
+                    style={{
+                      backgroundColor: "hsl(var(--muted))",
+                      color: "hsl(var(--muted-foreground))",
+                      border: "none",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = "black";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color =
+                        "hsl(var(--muted-foreground))";
+                    }}
+                  >
+                    {item.title}
+                  </Button>
+                ))}
+              </div>
+
               <Sender
                 ref={senderRef}
                 value={input}

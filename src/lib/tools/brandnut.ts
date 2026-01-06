@@ -56,7 +56,7 @@ interface ErrorResponse {
  * Build URL with query parameters
  */
 function buildUrl(baseUrl: string, path: string, params: Record<string, any>): string {
-  const url = new URL(path, baseUrl)
+  const url = new URL(baseUrl + path)
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null) {
       if (Array.isArray(value)) {
@@ -268,13 +268,13 @@ export const brandnutTools = [
     {
       name: 'list_instances',
       description:
-        '列出公共实例库的所有实例（支持分页和标签过滤）。' +
-        '使用场景：当用户需要浏览可用的 prompt 模板实例时使用。' +
+        '列出内置的思维框架（支持分页和分类过滤）。' +
+        '使用场景：当问题需要更高维度的战略管理思维框架时，先用 get_tags 接口查看已内置的思维框架的目录，再浏览该分类的思维框架，决定使用哪个思维框架，最后用 get_single_instance 接口查看思维框架的完整内容' +
         '\n\n重要提示：' +
-        '\n- 仅返回元信息（不含 prompt 内容），避免返回过长内容' +
+        '\n- 该接口仅返回元信息（不含 prompt 内容），避免返回过长内容，如果需要查看实例的完整 prompt 内容，请使用 get_single_instance 接口' +
         '\n- page 从1开始，默认为1' +
         '\n- page_size 默认为10，最大100' +
-        '\n- tags 是标签数组，用于过滤实例',
+        '\n- tags 是类目的分类，用于过滤实例，以企业板块分类（如营销、人事）',
       schema: z.object({
         page: z.number().min(1).optional().default(1).describe('页码，从1开始'),
         page_size: z.number().min(1).max(100).optional().default(10).describe('每页数量'),
@@ -290,8 +290,8 @@ export const brandnutTools = [
     {
       name: 'get_tags',
       description:
-        '获取所有可用的标签信息（包括颜色配置）。' +
-        '使用场景：当用户需要了解有哪些标签可以用于过滤实例时使用。',
+        '获取所有思维框架的分类目录' +
+        '使用场景：当前问题需要更高维度的战略管理思维框架时，先查看已内置的思维框架的目录，再决定使用哪个思维框架',
       schema: z.object({}),
     }
   ),
@@ -303,8 +303,8 @@ export const brandnutTools = [
     {
       name: 'get_single_instance',
       description:
-        '获取单个实例的完整详情（包括 prompt 内容）。' +
-        '使用场景：当用户需要查看特定实例的完整 prompt 时使用。' +
+        '获取单个思维框架实例的完整详情（包括 prompt 内容）。' +
+        '使用场景：当已经决定使用某个思维框架时，使用该接口查看思维框架的完整内容' +
         '\n\n重要提示：' +
         '\n- id 是实例ID（UUID格式），必需参数',
       schema: z.object({
@@ -318,7 +318,7 @@ export const brandnutTools = [
  * Tool registry for display names (for frontend)
  */
 export const BRANDNUT_TOOL_REGISTRY: Record<string, { display_name: string }> = {
-  list_instances: { display_name: '列出实例' },
-  get_tags: { display_name: '获取标签' },
-  get_single_instance: { display_name: '获取实例详情' },
+  list_instances: { display_name: '搜索思维框架' },
+  get_tags: { display_name: '查看思维框架目录' },
+  get_single_instance: { display_name: '学习思维框架并内化' },
 }
