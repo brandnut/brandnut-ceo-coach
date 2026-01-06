@@ -42,11 +42,11 @@ const QUICK_PROMPTS = [
       "帮我在内置的思维框架库里搜寻合适的进阶思维框架，并解决我当前的问题：",
     icon: "BulbOutlined",
   },
-  // {
-  //   title: "记忆回顾",
-  //   prompt: "回顾一下关于我和企业你已经知道了哪些信息？",
-  //   icon: "HistoryOutlined",
-  // },
+  {
+    title: "记忆回顾",
+    prompt: "我的人物关键词是什么？",
+    icon: "HistoryOutlined",
+  },
 ];
 
 // 图标映射

@@ -83,7 +83,12 @@
       "Bash(/tmp/test-request.sh:*)",
       "Bash(/tmp/test2.sh:*)",
       "Bash(/tmp/test-tool-fix.sh:*)",
-      "Bash(/tmp/test-brandnut-tool.sh:*)"
+      "Bash(/tmp/test-brandnut-tool.sh:*)",
+      "Bash(PGPASSWORD=\"VKBABC9uUGcgr4U\" psql:*)",
+      "Bash(grep:*)",
+      "Bash(while:*)",
+      "Bash(do clear:*)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []
