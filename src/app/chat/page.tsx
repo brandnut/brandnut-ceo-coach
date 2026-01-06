@@ -13,6 +13,8 @@ import {
   DeleteOutlined,
   QuestionCircleOutlined,
   LoadingOutlined,
+  BulbOutlined,
+  HistoryOutlined,
 } from "@ant-design/icons";
 import TutorialModal from "@/components/TutorialModal";
 import Navigation from "@/components/layout/Navigation";
@@ -34,14 +36,23 @@ import { welcomeText, guestMode } from "@/config/app";
 // 快捷提示数据集（精简版，通用 CEO 教练场景）
 const QUICK_PROMPTS = [
   {
-    title: "思维框架",
-    prompt: "帮我在内置的思维框架库里搜寻合适的思维框架，并解决我当前的问题：",
+    title: "进阶思维框架",
+    prompt:
+      "帮我在内置的思维框架库里搜寻合适的进阶思维框架，并解决我当前的问题：",
+    icon: "BulbOutlined",
   },
   // {
   //   title: "记忆回顾",
   //   prompt: "回顾一下关于我和企业你已经知道了哪些信息？",
+  //   icon: "HistoryOutlined",
   // },
 ];
+
+// 图标映射
+const ICON_MAP: Record<string, React.ReactNode> = {
+  BulbOutlined: <BulbOutlined />,
+  HistoryOutlined: <HistoryOutlined />,
+};
 
 export default function ChatPage() {
   const [input, setInput] = useState("");
@@ -68,7 +79,10 @@ export default function ChatPage() {
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [dashboardQuestions, setDashboardQuestions] = useState<Record<string, string[]> | null>(null);
+  const [dashboardQuestions, setDashboardQuestions] = useState<Record<
+    string,
+    string[]
+  > | null>(null);
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -773,18 +787,20 @@ export default function ChatPage() {
               ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full gap-6 text-muted-foreground">
                   <span className="text-4xl">{welcomeText.greeting}</span>
-                  {dashboardQuestions && Object.keys(dashboardQuestions).length > 0 && (
-                    <p className="text-base font-medium">
-                      {welcomeText.suggestedQuestionsTitle}
-                    </p>
-                  )}
+                  {dashboardQuestions &&
+                    Object.keys(dashboardQuestions).length > 0 && (
+                      <p className="text-base font-medium">
+                        {welcomeText.suggestedQuestionsTitle}
+                      </p>
+                    )}
                   {isLoadingDashboard ? (
                     <div className="flex flex-col items-center justify-center">
                       <span className="spinner-large"></span>
                     </div>
-                  ) : dashboardQuestions && Object.keys(dashboardQuestions).length > 0 ? (
+                  ) : dashboardQuestions &&
+                    Object.keys(dashboardQuestions).length > 0 ? (
                     <div className="relative w-full max-w-6xl">
-                      <div className="flex flex-col gap-4 w-full overflow-y-auto px-4 pb-16 h-[45vh] sm:h-[60vh]">
+                      <div className="flex flex-col gap-4 w-full overflow-y-auto px-4 pb-10 h-[45vh] sm:h-[60vh]">
                         <div className="space-y-4">
                           {Object.entries(dashboardQuestions).map(
                             ([category, questions]) => (
@@ -799,7 +815,7 @@ export default function ChatPage() {
                                         key={`${category}-${index}`}
                                         className="p-2 sm:p-3 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors min-w-[140px] max-w-[140px] sm:min-w-[180px] sm:max-w-[180px] flex-shrink-0 flex items-center justify-center text-center"
                                         style={{
-                                          boxShadow: '1px 1px 2px #00000014'
+                                          boxShadow: "1px 1px 2px #00000014",
                                         }}
                                         onClick={() => setInput(question)}
                                       >
@@ -818,7 +834,8 @@ export default function ChatPage() {
                       <div
                         className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none"
                         style={{
-                          background: 'linear-gradient(to bottom, transparent, white)'
+                          background:
+                            "linear-gradient(to bottom, transparent, white)",
                         }}
                       ></div>
                     </div>
@@ -936,6 +953,7 @@ export default function ChatPage() {
                       items: QUICK_PROMPTS.map((item) => ({
                         key: item.title,
                         label: item.title,
+                        icon: item.icon ? ICON_MAP[item.icon] : undefined,
                         onClick: () => {
                           setInput(item.prompt);
                           senderRef.current?.focus();
