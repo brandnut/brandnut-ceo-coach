@@ -61,7 +61,7 @@ export async function getConversation(
     const query = `
       SELECT id, user_id, title, created_at, updated_at
       FROM agent_conversations
-      WHERE id = $1 AND user_id = $2
+      WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
     `
 
     const result = await client.query(query, [conversationId, userId])
@@ -229,7 +229,7 @@ export async function getUserConversations(
     const countQuery = `
       SELECT COUNT(*) as total
       FROM agent_conversations
-      WHERE user_id = $1
+      WHERE user_id = $1 AND deleted_at IS NULL
     `
     const countResult = await client.query(countQuery, [userId])
     const total = parseInt(countResult.rows[0].total, 10)
@@ -238,7 +238,7 @@ export async function getUserConversations(
     const query = `
       SELECT id, user_id, title, created_at, updated_at
       FROM agent_conversations
-      WHERE user_id = $1
+      WHERE user_id = $1 AND deleted_at IS NULL
       ORDER BY updated_at DESC
       LIMIT $2 OFFSET $3
     `
@@ -313,3 +313,38 @@ export async function markMessageError(
     await client.query(query, [errorMessage, messageId])
   })
 }
+
+/**
+ * Soft delete a conversation
+ */
+export async function softDeleteConversation(
+  conversationId: string,
+  userId: string
+): Promise<void> {
+  return withClient(async (client) => {
+    // 1. Verify ownership
+    const checkQuery = `
+      SELECT user_id FROM agent_conversations
+      WHERE id = $1 AND deleted_at IS NULL
+    `
+    const result = await client.query(checkQuery, [conversationId])
+
+    if (result.rows.length === 0) {
+      throw new Error('Conversation not found or already deleted')
+    }
+
+    if (result.rows[0].user_id !== userId) {
+      throw new Error('Unauthorized')
+    }
+
+    // 2. Soft delete conversation
+    await client.query(`
+      UPDATE agent_conversations
+      SET deleted_at = NOW()
+      WHERE id = $1
+    `, [conversationId])
+
+    // Note: messages are not marked as deleted, they are filtered via conversation_id
+  })
+}
+
