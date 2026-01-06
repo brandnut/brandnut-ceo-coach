@@ -512,3 +512,8 @@ textarea {
   border: 1px solid hsl(var(--border));
 }
 
+/* Fix sender prefix vertical alignment */
+.ant-sender-content {
+  align-items: center !important;
+}
+

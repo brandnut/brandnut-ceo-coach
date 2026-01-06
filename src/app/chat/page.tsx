@@ -6,7 +6,8 @@ import { useApp } from "@/contexts/AppContext";
 import { storage, storageKeys } from "@/lib/storage";
 
 import { Sender, Attachments, Conversations } from "@ant-design/x";
-import { Popover, Upload, Button } from "antd";
+import { Popover, Upload, Button, Dropdown } from "antd";
+import type { MenuProps } from "antd";
 import {
   PaperClipOutlined,
   DeleteOutlined,
@@ -909,42 +910,6 @@ export default function ChatPage() {
             </div>
 
             <div className="input-container">
-              {/* 快捷提示按钮 */}
-              <div
-                style={{
-                  marginBottom: "8px",
-                  display: "flex",
-                  gap: "8px",
-                  flexWrap: "wrap",
-                }}
-              >
-                {QUICK_PROMPTS.map((item) => (
-                  <Button
-                    key={item.title}
-                    size="small"
-                    onClick={() => {
-                      setInput(item.prompt);
-                      senderRef.current?.focus();
-                    }}
-                    disabled={isStreaming}
-                    style={{
-                      backgroundColor: "hsl(var(--muted))",
-                      color: "hsl(var(--muted-foreground))",
-                      border: "none",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = "black";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color =
-                        "hsl(var(--muted-foreground))";
-                    }}
-                  >
-                    {item.title}
-                  </Button>
-                ))}
-              </div>
-
               <Sender
                 ref={senderRef}
                 value={input}
@@ -955,6 +920,41 @@ export default function ChatPage() {
                 placeholder="开始提问..."
                 autoSize={{ minRows: 1, maxRows: 5 }}
                 rootClassName="overflow-x-hidden"
+                prefix={
+                  <Dropdown
+                    menu={{
+                      items: QUICK_PROMPTS.map((item) => ({
+                        key: item.title,
+                        label: item.title,
+                        onClick: () => {
+                          setInput(item.prompt);
+                          senderRef.current?.focus();
+                        },
+                      })),
+                      disabled: isStreaming,
+                    }}
+                    trigger={["click"]}
+                    placement="topLeft"
+                  >
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<PlusOutlined />}
+                      disabled={isStreaming}
+                      style={{
+                        color: "hsl(var(--muted-foreground))",
+                        padding: "0 4px",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = "hsl(var(--foreground))";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color =
+                          "hsl(var(--muted-foreground))";
+                      }}
+                    />
+                  </Dropdown>
+                }
                 header={
                   attachments.length > 0 && (
                     <Sender.Header title="附件" open={true}>

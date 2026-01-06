@@ -58,7 +58,7 @@ ${systemPrompt.slice(0, 500)}
 用户记忆：
 ${memoryContext}
 
-分类：战略、市场营销、产品、财务、组织、自我剖析、记忆
+分类：战略、市场营销、产品、财务、组织、自我剖析
 要求：
 - 每个分类3-5个问题
 - 这些问题是用户可以问AI的，例如："如何判断...？"、"XX和YY该选哪个？"、"怎样做才能...？"
@@ -73,8 +73,7 @@ ${memoryContext}
   "产品": [...],
   "财务": [...],
   "组织": [...],
-  "自我剖析": [...],
-  "记忆": [...]
+  "自我剖析": [...]
 }`
 
   // 4. Call GLM 4.5 Air with structured output
@@ -121,12 +120,8 @@ ${memoryContext}
                 type: 'array',
                 items: { type: 'string' },
               },
-              记忆: {
-                type: 'array',
-                items: { type: 'string' },
-              },
             },
-            required: ['战略', '市场营销', '产品', '财务', '组织', '自我剖析', '记忆'],
+            required: ['战略', '市场营销', '产品', '财务', '组织', '自我剖析'],
             additionalProperties: false,
           },
         },
