@@ -307,6 +307,7 @@ export default function ChatPage() {
 
     try {
       const headers = getAuthHeaders(storage, storageKeys);
+      // Unified upload endpoint handles all file types
       const response = await fetch(getApiUrl("/api/upload"), {
         method: "POST",
         headers,
@@ -357,10 +358,21 @@ export default function ChatPage() {
       },
       onSuccess: (response) => {
         console.log("Upload success:", response);
+        // Handle both old format (images/PDF) and new format (text documents)
+        const url = response.url || response.file?.url;
+        const mimeType = response.mimeType || response.file?.type;
+
         setAttachments((prev) =>
           prev.map((f) =>
             f.uid === uid
-              ? { ...f, status: "done", percent: 100, uploadedId: response.id }
+              ? {
+                  ...f,
+                  status: "done",
+                  percent: 100,
+                  uploadedId: response.id,
+                  url,
+                  ...(mimeType && { type: mimeType })
+                }
               : f
           )
         );
@@ -469,9 +481,21 @@ export default function ChatPage() {
     // Track conversation ID for title generation (may be updated during stream)
     let finalConvId = currentConvId;
 
-    // Convert attachments to agent API format
+    // Separate attachments into:
+    // 1. Text documents (txt/docx/xlsx) -> use attachment_ids
+    // 2. Images/PDFs -> use attachments (multimodal)
+    const textDocumentIds = attachments
+      .filter(() => false)
+      .map((f) => f.uploadedId!)
+      .filter((id): id is string => !!id);
+
     const agentAttachments: Attachment[] = attachments
-      .filter((f) => f.uploadedId && f.url)
+      .filter(
+        (f) =>
+          f.uploadedId &&
+          f.url &&
+          (f.type.startsWith("image/") || f.type === "application/pdf")
+      )
       .map((f) => {
         const isImage = f.type.startsWith("image/");
         return {
@@ -529,7 +553,8 @@ export default function ChatPage() {
         body: JSON.stringify({
           message: userMessage,
           conversationId: currentConvId,
-          attachments: agentAttachments,
+          ...(textDocumentIds.length > 0 && { attachment_ids: textDocumentIds }),
+          ...(agentAttachments.length > 0 && { attachments: agentAttachments }),
         }),
         signal: abortControllerRef.current.signal,
       });

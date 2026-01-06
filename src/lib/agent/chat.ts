@@ -51,10 +51,18 @@ export function convertToLangChainMessages(
   messages: Message[],
   newAttachments?: Attachment[]
 ): BaseMessage[] {
-  // Filter out tool messages - they should not be sent to LLM
-  // Tool results are already incorporated in assistant responses
   const convertedMessages = messages
-    .filter((msg) => msg.role !== 'tool')
+    .filter((msg) => {
+      // Remove tool messages (they're after the current conversation)
+      if (msg.role === 'tool') return false
+
+      // Remove assistant messages with tool_calls (historical tool intermediate steps)
+      if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
+        return false
+      }
+
+      return true
+    })
     .map((msg, idx) => {
       const isLastUserMessage = idx === messages.length - 1 && msg.role === 'user'
 
@@ -64,37 +72,38 @@ export function convertToLangChainMessages(
         ? [...(msg.attachments || []), ...(newAttachments || [])]
         : msg.attachments
 
-      // Handle multimodal messages
-      if (attachments && attachments.length > 0) {
-        const imageContent = convertAttachmentsToContent(attachments)
-
-        if (imageContent.length > 0) {
-          return new HumanMessage({
-            content: [
-              { type: 'text', text: msg.content },
-              ...imageContent,
-            ],
-          })
-        }
-      }
-
-      // Handle text-only messages
+      // Handle user messages
       if (msg.role === 'user') {
-        return new HumanMessage(msg.content)
-      } else if (msg.role === 'assistant') {
-        // Check if this message has tool_calls
-        if (msg.tool_calls && msg.tool_calls.length > 0) {
-          return new AIMessage({
-            content: msg.content || '',
-            tool_calls: msg.tool_calls,
-          })
-        } else {
-          return new AIMessage(msg.content)
+        // Priority 1: Use injected_content (document text already merged)
+        if (msg.injected_content) {
+          return new HumanMessage(msg.injected_content)
         }
-      } else {
-        // system messages from DB
-        return new SystemMessage(msg.content)
+
+        // Priority 2: Handle multimodal attachments (images, PDFs)
+        if (attachments && attachments.length > 0) {
+          const imageContent = convertAttachmentsToContent(attachments)
+
+          if (imageContent.length > 0) {
+            return new HumanMessage({
+              content: [
+                { type: 'text', text: msg.content },
+                ...imageContent,
+              ],
+            })
+          }
+        }
+
+        // Priority 3: Plain text message
+        return new HumanMessage(msg.content)
       }
+
+      // Handle assistant messages (only those without tool_calls remain after filter)
+      if (msg.role === 'assistant') {
+        return new AIMessage(msg.content)
+      }
+
+      // Handle system messages
+      return new SystemMessage(msg.content)
     })
 
   return convertedMessages

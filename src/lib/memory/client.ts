@@ -147,24 +147,17 @@ export async function addMessage(
 
 /**
  * Format memory data into a prompt context string
+ * Only includes preferences, excludes facts and preference_note
  */
 export function formatMemoryContext(data: MemorySearchResponse['data']): string {
   const parts: string[] = []
 
-  // Format long-term memories
-  if (data.memory_detail_list.length > 0) {
-    const memories = data.memory_detail_list
-      .map((m) => `- ${m.memory_key}: ${m.memory_value}`)
-      .join('\n')
-    parts.push(`用户的事实记忆：\n${memories}`)
-  }
-
-  // Format preferences
+  // Only format preferences (exclude facts/memory_detail_list and preference_note)
   if (data.preference_detail_list.length > 0) {
     const preferences = data.preference_detail_list
       .map((p) => `- ${p.preference} (${p.reasoning})`)
       .join('\n')
-    parts.push(`用户的偏好记忆：\n${preferences}`)
+    parts.push(`用户偏好：\n${preferences}`)
   }
 
   return parts.join('\n\n')

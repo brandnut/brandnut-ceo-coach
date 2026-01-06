@@ -90,7 +90,7 @@ export async function getConversationMessages(
 ): Promise<Message[]> {
   return withClient(async (client) => {
     const query = `
-      SELECT id, conversation_id, role, content, attachments,
+      SELECT id, conversation_id, role, content, injected_content, attachments,
              tool_calls, tool_call_id, tool_name, created_at
       FROM agent_messages
       WHERE conversation_id = $1
@@ -121,6 +121,7 @@ export async function getConversationMessages(
         conversationId: row.conversation_id,
         role: row.role,
         content: row.content,
+        injected_content: row.injected_content || undefined,
         attachments: row.attachments || [],
         tool_calls,
         tool_call_id: row.tool_call_id || undefined,
@@ -144,16 +145,17 @@ export async function createMessage(
     tool_calls?: Array<{ id: string; name: string; args: Record<string, any> }>
     tool_call_id?: string
     tool_name?: string
-  }
+  },
+  injected_content?: string // Merged content with file text
 ): Promise<Message> {
   return withClient(async (client) => {
     const query = `
       INSERT INTO agent_messages (
-        conversation_id, role, content, attachments,
+        conversation_id, role, content, injected_content, attachments,
         tool_calls, tool_call_id, tool_name
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING id, conversation_id, role, content, attachments,
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id, conversation_id, role, content, injected_content, attachments,
                 tool_calls, tool_call_id, tool_name, created_at
     `
 
@@ -161,6 +163,7 @@ export async function createMessage(
       conversationId,
       role,
       content,
+      injected_content || null,
       JSON.stringify(attachments || []),
       toolData?.tool_calls ? JSON.stringify(toolData.tool_calls) : null,
       toolData?.tool_call_id || null,
@@ -188,6 +191,7 @@ export async function createMessage(
       conversationId: row.conversation_id,
       role: row.role,
       content: row.content,
+      injected_content: row.injected_content || undefined,
       attachments: row.attachments || [],
       tool_calls,
       tool_call_id: row.tool_call_id || undefined,

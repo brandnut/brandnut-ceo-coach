@@ -7,6 +7,7 @@
 
 export interface Attachment {
   type: 'image' | 'pdf' | 'document'
+  id?: string // File extraction ID for documents (file_extractions.id), optional for images/PDFs
   url: string
   mimeType: string
   name: string
@@ -16,7 +17,8 @@ export interface Message {
   id: string
   conversationId: string
   role: 'user' | 'assistant' | 'system' | 'tool'
-  content: string
+  content: string // User's pure input text
+  injected_content?: string // Merged content with file text for LLM
   attachments: Attachment[]
 
   // Phase 2: Tool support
@@ -100,7 +102,7 @@ export type SSEEvent =
 export interface ChatRequest {
   message: string
   conversationId?: string
-  attachments?: Attachment[]
+  attachment_ids?: string[] // File extraction IDs for document uploads
 }
 
 export interface ConversationListResponse {

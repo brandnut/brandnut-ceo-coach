@@ -4,7 +4,8 @@
  * Pre-LLM hooks: system prompt injection, memory lookup, request logging, etc.
  */
 
-import { SystemMessage, HumanMessage } from '@langchain/core/messages'
+import { SystemMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
+import { BaseMessage } from '@langchain/core/messages'
 import { AgentState } from '../state'
 import { searchMemory, formatMemoryContext } from '@/lib/memory/client'
 
@@ -38,7 +39,7 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
     }
   }
 
-  const messages: Array<SystemMessage | HumanMessage> = []
+  const messages: BaseMessage[] = []
 
   // 2. Inject system prompt with timestamp if provided
   if (state.systemPrompt) {
@@ -58,7 +59,12 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
     console.log('[Preprocess] Injected system prompt with timestamp:', timestamp)
   }
 
-  // 3. Memory lookup (pre-LLM) - inject into HumanMessage
+  // 3. Add all conversation messages EXCEPT the last user message
+  // The last user message will be augmented with memory context
+  const allMessagesExceptLast = state.messages.slice(0, -1)
+  messages.push(...allMessagesExceptLast)
+
+  // 4. Memory lookup (pre-LLM) - only preferences, no facts
   let memoryContext = ''
   if (state.userId && state.conversationId && state.messages.length > 0) {
     // Get the last user message as query
@@ -74,29 +80,37 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
 
           if (memoryContext) {
             // Insert memory context directly into the HumanMessage content
-            const augmentedContent = `${memoryContext}\n---\n\n ${query}`
+            const augmentedContent = `${memoryContext}\n---\n\n${query}`
             messages.push(new HumanMessage(augmentedContent))
 
-            console.log('[Preprocess] Injected memory context into HumanMessage:', {
-              memories: memoryData.memory_detail_list.length,
+            console.log('[Preprocess] Injected memory context (preferences only):', {
               preferences: memoryData.preference_detail_list.length,
             })
           } else {
             // No memory context, add original human message
-            messages.push(lastMessage as HumanMessage)
+            messages.push(lastMessage)
           }
         } else {
           // No memory data, add original human message
-          messages.push(lastMessage as HumanMessage)
+          messages.push(lastMessage)
         }
       } else {
         // Empty query, add original human message
-        messages.push(lastMessage as HumanMessage)
+        messages.push(lastMessage)
       }
+    } else if (lastMessage) {
+      // Not a HumanMessage (e.g., AIMessage), add as-is
+      messages.push(lastMessage)
+    }
+  } else {
+    // No userId/conversationId, just add the last message as-is
+    const lastMessage = state.messages[state.messages.length - 1]
+    if (lastMessage) {
+      messages.push(lastMessage)
     }
   }
 
-  // 4. Return new messages (will replace original messages)
+  // 5. Return new messages (system prompt + history + augmented last message)
   return {
     messages,
     requestMetadata: {

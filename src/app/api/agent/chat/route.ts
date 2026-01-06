@@ -17,9 +17,10 @@ import {
   markMessageError,
 } from '@/lib/db/agent-queries'
 import { getUserChatConfig } from '@/lib/db/queries'
+import { getFileExtractions } from '@/lib/db/file-queries'
 import { streamChatResponseGraph } from '@/lib/agent/chat'
 import { agentConfig } from '@/config/app'
-import { ChatRequest } from '@/types/agent'
+import { ChatRequest, Attachment } from '@/types/agent'
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Parse request
     const body: ChatRequest = await request.json()
-    const { message, conversationId, attachments } = body
+    const { message, conversationId, attachment_ids } = body
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json(
@@ -41,7 +42,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 3. Get or create conversation
+    // 3. Query file extractions if attachment_ids provided
+    let attachments: Attachment[] = []
+    let injected_content: string | undefined = undefined
+
+    if (attachment_ids && attachment_ids.length > 0) {
+      const extractions = await getFileExtractions(attachment_ids)
+
+      // Build attachments metadata (for UI display)
+      attachments = extractions.map((ext) => ({
+        id: ext.id,
+        type: 'document' as const,
+        url: ext.file_url,
+        name: ext.file_name,
+        mimeType: ext.mime_type || 'application/octet-stream',
+      }))
+
+      // Build injected_content: "[User uploaded file: xxx.docx]\n{file text}\n{user message}"
+      const fileParts = extractions.map(
+        (ext) => `[User uploaded file: ${ext.file_name}]\n${ext.extracted_text}`
+      )
+
+      injected_content = [...fileParts, message].join('\n\n')
+    }
+
+    // 4. Get or create conversation
     let convId = conversationId
 
     if (convId) {
@@ -59,21 +84,28 @@ export async function POST(request: NextRequest) {
       convId = newConv.id
     }
 
-    // 4. Save user message immediately (eliminates consistency issues)
-    const userMessage = await createMessage(convId, 'user', message, attachments)
+    // 5. Save user message immediately (eliminates consistency issues)
+    const userMessage = await createMessage(
+      convId,
+      'user',
+      message,
+      attachments,
+      undefined,
+      injected_content
+    )
 
-    // 5. Load conversation history (limit to recent rounds to prevent context explosion)
+    // 6. Load conversation history (limit to recent rounds to prevent context explosion)
     const history = await getConversationMessages(convId, agentConfig.maxConversationRounds * 2)
 
-    // 6. Get organization chat config (system prompt + model)
+    // 7. Get organization chat config (system prompt + model)
     const chatConfig = await getUserChatConfig(authResult.user.id)
     const systemPrompt = chatConfig?.system_prompt || undefined
     const modelName = chatConfig?.model_name || undefined
 
-    // 7. Extract userId for closure (TypeScript type narrowing doesn't cross async boundaries)
+    // 8. Extract userId for closure (TypeScript type narrowing doesn't cross async boundaries)
     const userId = authResult.user.id
 
-    // 8. Stream response
+    // 9. Stream response
     const encoder = new TextEncoder()
 
     const stream = new ReadableStream({

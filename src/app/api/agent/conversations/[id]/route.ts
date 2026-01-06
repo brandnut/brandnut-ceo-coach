@@ -8,7 +8,7 @@ import { softDeleteConversation } from '@/lib/db/agent-queries'
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Authentication
@@ -19,7 +19,8 @@ export async function DELETE(
     }
 
     // Soft delete
-    await softDeleteConversation(params.id, authResult.user.id)
+    const { id } = await params
+    await softDeleteConversation(id, authResult.user.id)
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
