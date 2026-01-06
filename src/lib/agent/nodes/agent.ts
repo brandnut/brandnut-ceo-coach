@@ -44,13 +44,35 @@ export async function agentNode(state: AgentState): Promise<Partial<AgentState>>
   }).bindTools(tools)
 
   // Prepare request payload for logging
+  // Convert LangChain message types to our role names
   const requestPayload = {
     model: modelName,
-    messages: state.messages.map((msg) => ({
-      role: msg._getType(),
-      content: msg.content,
-      tool_calls: (msg as any).tool_calls,
-    })),
+    messages: state.messages.map((msg) => {
+      // Map LangChain types to our role names
+      let role: string
+      switch (msg._getType()) {
+        case 'human':
+          role = 'user'
+          break
+        case 'ai':
+          role = 'assistant'
+          break
+        case 'system':
+          role = 'system'
+          break
+        case 'tool':
+          role = 'tool'
+          break
+        default:
+          role = msg._getType()
+      }
+
+      return {
+        role,
+        content: msg.content,
+        tool_calls: (msg as any).tool_calls,
+      }
+    }),
     temperature: 0.7,
     streaming: true,
   }
