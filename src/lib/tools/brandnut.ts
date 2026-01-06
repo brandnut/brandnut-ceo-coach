@@ -140,23 +140,21 @@ async function listInstances(
       metadata_only: metadataOnly,
     })
 
-    const logContext: LoggedFetchOptions['logContext'] = {
-      userId: '',
-      conversationId: '',
-      requestType: 'tool_use',
-    }
-
     const response = await loggedFetch(url, {
       method: 'GET',
       headers: {
         'X-API-Key': BRANDNUT_API_KEY,
       },
-      logContext,
     })
 
     if (!response.ok) {
-      const error: ErrorResponse = await response.json()
-      return `Error: ${error.detail || response.statusText}`
+      // Try to parse error as JSON, fallback to status text
+      try {
+        const error: ErrorResponse = await response.json()
+        return `Error: ${error.detail || response.statusText}`
+      } catch {
+        return `Error: ${response.status} ${response.statusText}`
+      }
     }
 
     const data: ListInstancesResponse = await response.json()
@@ -185,23 +183,21 @@ async function getTags(): Promise<string> {
   try {
     const url = `${BRANDNUT_API_BASE}/tags`
 
-    const logContext: LoggedFetchOptions['logContext'] = {
-      userId: '',
-      conversationId: '',
-      requestType: 'tool_use',
-    }
-
     const response = await loggedFetch(url, {
       method: 'GET',
       headers: {
         'X-API-Key': BRANDNUT_API_KEY,
       },
-      logContext,
     })
 
     if (!response.ok) {
-      const error: ErrorResponse = await response.json()
-      return `Error: ${error.detail || response.statusText}`
+      // Try to parse error as JSON, fallback to status text
+      try {
+        const error: ErrorResponse = await response.json()
+        return `Error: ${error.detail || response.statusText}`
+      } catch {
+        return `Error: ${response.status} ${response.statusText}`
+      }
     }
 
     const data: TagInfo[] = await response.json()
@@ -229,23 +225,21 @@ async function getSingleInstance(id: string): Promise<string> {
   try {
     const url = `${BRANDNUT_API_BASE}/instance/${id}`
 
-    const logContext: LoggedFetchOptions['logContext'] = {
-      userId: '',
-      conversationId: '',
-      requestType: 'tool_use',
-    }
-
     const response = await loggedFetch(url, {
       method: 'GET',
       headers: {
         'X-API-Key': BRANDNUT_API_KEY,
       },
-      logContext,
     })
 
     if (!response.ok) {
-      const error: ErrorResponse = await response.json()
-      return `Error: ${error.detail || response.statusText}`
+      // Try to parse error as JSON, fallback to status text
+      try {
+        const error: ErrorResponse = await response.json()
+        return `Error: ${error.detail || response.statusText}`
+      } catch {
+        return `Error: ${response.status} ${response.statusText}`
+      }
     }
 
     const data: InstanceItem = await response.json()

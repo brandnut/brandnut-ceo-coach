@@ -34,7 +34,7 @@ import { welcomeQuestions, welcomeText, guestMode } from "@/config/app";
 const QUICK_PROMPTS = [
   {
     title: "思维框架",
-    prompt: "帮我搜寻合适的思维框架，并解决我当前的问题：",
+    prompt: "帮我在内置的思维框架库里搜寻合适的思维框架，并解决我当前的问题：",
   },
   // {
   //   title: "记忆回顾",

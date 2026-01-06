@@ -79,7 +79,11 @@
       "Bash(wc:*)",
       "Bash(npx tsx:*)",
       "Bash(git pull:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(/tmp/test-request.sh:*)",
+      "Bash(/tmp/test2.sh:*)",
+      "Bash(/tmp/test-tool-fix.sh:*)",
+      "Bash(/tmp/test-brandnut-tool.sh:*)"
     ],
     "deny": [],
     "ask": []
