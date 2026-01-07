@@ -571,6 +571,7 @@ export default function ChatPage() {
       const decoder = new TextDecoder("utf-8");
       let buffer = "";
       let assistantContent = "";
+      let streamCompleted = false; // Track if stream completed normally
       const MIN_CHUNK_SIZE = 64; // Accumulate threshold to reduce fragment processing
 
       // SSE parsing with buffer accumulation
@@ -615,6 +616,7 @@ export default function ChatPage() {
                   );
                 } else if (currentEvent === "done" && data.message) {
                   // Final message from server (replace temp message with real one)
+                  streamCompleted = true; // Mark stream as completed normally
                   setMessages((prev) =>
                     prev.map((msg) =>
                       msg.id === tempAssistantId ? data.message : msg
@@ -660,6 +662,12 @@ export default function ChatPage() {
       // Don't show error if aborted by user
       if (error instanceof Error && error.name === "AbortError") {
         console.log("Request aborted by user");
+        return;
+      }
+
+      // Don't show error if stream completed normally (post-close network errors are expected)
+      if (streamCompleted) {
+        console.log("Stream completed, ignoring post-close error:", error);
         return;
       }
 
