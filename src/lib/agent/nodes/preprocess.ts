@@ -75,9 +75,9 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
   if (state.userId && state.conversationId && state.messages.length > 0) {
     // Get the last user message as query
     const lastMessage = state.messages[state.messages.length - 1]
-    console.log('[Preprocess] Last message type:', lastMessage?.constructor?.name)
+    console.log('[Preprocess] Last message type:', lastMessage?._getType())
 
-    if (lastMessage && lastMessage.constructor.name === 'HumanMessage') {
+    if (lastMessage && lastMessage._getType() === 'human') {
       const query = typeof lastMessage.content === 'string' ? lastMessage.content : ''
       console.log('[Preprocess] Query length:', query?.length)
 
