@@ -66,14 +66,29 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
 
   // 4. Memory lookup (pre-LLM) - only preferences, no facts
   let memoryContext = ''
+  console.log('[Preprocess] Memory lookup check:', {
+    hasUserId: !!state.userId,
+    hasConversationId: !!state.conversationId,
+    messageCount: state.messages.length,
+  })
+
   if (state.userId && state.conversationId && state.messages.length > 0) {
     // Get the last user message as query
     const lastMessage = state.messages[state.messages.length - 1]
+    console.log('[Preprocess] Last message type:', lastMessage?.constructor?.name)
+
     if (lastMessage && lastMessage.constructor.name === 'HumanMessage') {
       const query = typeof lastMessage.content === 'string' ? lastMessage.content : ''
+      console.log('[Preprocess] Query length:', query?.length)
 
       if (query) {
+        console.log('[Preprocess] Calling searchMemory...')
         const memoryData = await searchMemory(state.userId, state.conversationId, query)
+        console.log('[Preprocess] Memory data received:', {
+          hasData: !!memoryData,
+          preferencesCount: memoryData?.preference_detail_list?.length || 0,
+          memoriesCount: memoryData?.memory_detail_list?.length || 0,
+        })
 
         if (memoryData) {
           memoryContext = formatMemoryContext(memoryData)
