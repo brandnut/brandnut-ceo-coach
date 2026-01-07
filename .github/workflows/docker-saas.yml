@@ -66,6 +66,7 @@ jobs:
             OSS_ACCESS_KEY_ID=${{ secrets.OSS_ACCESS_KEY_ID }}
             OSS_ACCESS_KEY_SECRET=${{ secrets.OSS_ACCESS_KEY_SECRET }}
             MEMOS_API_KEY=${{ secrets.MEMOS_API_KEY }}
+            BRANDNUT_MEMORY_API_KEY=${{ secrets.BRANDNUT_MEMORY_API_KEY }}
             # Configuration data from vars
             DIFY_API_URL=${{ vars.DIFY_API_URL }}
             GUEST_MODE_ENABLED=${{ vars.GUEST_MODE_ENABLED }}
