@@ -540,6 +540,9 @@ export default function ChatPage() {
     // Create AbortController for this request
     abortControllerRef.current = new AbortController();
 
+    // Track if stream completed normally (for error handling)
+    let streamCompleted = false;
+
     try {
       // Get auth headers
       const headers = {
@@ -571,7 +574,6 @@ export default function ChatPage() {
       const decoder = new TextDecoder("utf-8");
       let buffer = "";
       let assistantContent = "";
-      let streamCompleted = false; // Track if stream completed normally
       const MIN_CHUNK_SIZE = 64; // Accumulate threshold to reduce fragment processing
 
       // SSE parsing with buffer accumulation
