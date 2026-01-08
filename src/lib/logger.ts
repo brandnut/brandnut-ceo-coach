@@ -6,6 +6,7 @@
 
 import fs from 'fs'
 import path from 'path'
+import { spawn } from 'child_process'
 
 const LOG_DIR = '/app/logs'
 const LOG_FILE = path.join(LOG_DIR, 'app.log')
@@ -42,14 +43,14 @@ export function logToFile(level: 'info' | 'error' | 'warn', message: string, met
   }
 }
 
-// Override console methods to also log to file
+// Override console methods to also log to file and stdout
 if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
   const originalError = console.error
   const originalWarn = console.warn
   const originalInfo = console.info
 
   console.error = (...args: any[]) => {
-    originalError.apply(console, args)
+    originalError.apply(console, args) // Still output to stdout (docker logs)
     logToFile('error', args.join(' '))
   }
 
@@ -65,6 +66,8 @@ if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
 
   // Global unhandled exception handler
   process.on('uncaughtException', (error) => {
+    originalError(`Uncaught Exception: ${error.message}`)
+    if (error.stack) originalError(error.stack)
     logToFile('error', `Uncaught Exception: ${error.message}`, {
       stack: error.stack,
     })
@@ -74,8 +77,10 @@ if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
 
   // Global unhandled promise rejection handler
   process.on('unhandledRejection', (reason) => {
-    logToFile('error', `Unhandled Rejection: ${String(reason)}`, {
-      reason: String(reason),
+    const reasonStr = String(reason)
+    originalError(`Unhandled Rejection: ${reasonStr}`)
+    logToFile('error', `Unhandled Rejection: ${reasonStr}`, {
+      reason: reasonStr,
       stack: reason instanceof Error ? reason.stack : undefined,
     })
   })
