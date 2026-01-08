@@ -92,50 +92,68 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!isLoading) {
-      if (!isAuthenticated) {
-        if (!guestMode.enabled) {
-          router.push("/login");
+      try {
+        if (!isAuthenticated) {
+          if (!guestMode.enabled) {
+            router.push("/login");
+          } else {
+            // Guest mode: load conversations directly
+            loadConversations().catch((err) => {
+              console.error("[useEffect] Failed to load conversations in guest mode:", err);
+            });
+          }
         } else {
-          // Guest mode: load conversations directly
-          loadConversations();
-        }
-      } else {
-        loadConversations();
-        loadDashboard();
+          loadConversations().catch((err) => {
+            console.error("[useEffect] Failed to load conversations:", err);
+          });
+          loadDashboard().catch((err) => {
+            console.error("[useEffect] Failed to load dashboard:", err);
+          });
 
-        // Check if tutorial should be shown
-        const tutorialShown = storage.getItem(storageKeys.TUTORIAL_SHOWN);
-        if (tutorialShown !== "true") {
-          setIsHelpOpen(true);
-          storage.setItem(storageKeys.TUTORIAL_SHOWN, "true");
+          // Check if tutorial should be shown
+          const tutorialShown = storage.getItem(storageKeys.TUTORIAL_SHOWN);
+          if (tutorialShown !== "true") {
+            setIsHelpOpen(true);
+            storage.setItem(storageKeys.TUTORIAL_SHOWN, "true");
+          }
         }
+      } catch (error) {
+        console.error("[useEffect] Initialization error:", error);
       }
     }
   }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {
-    const container = messagesContainerRef.current;
-    if (!container || messages.length === 0) return;
+    try {
+      const container = messagesContainerRef.current;
+      if (!container || messages.length === 0) return;
 
-    const atTop = container.scrollTop === 0;
-    const threshold = 150;
-    const nearBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight <
-      threshold;
+      const atTop = container.scrollTop === 0;
+      const threshold = 150;
+      const nearBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight <
+        threshold;
 
-    const shouldScroll =
-      shouldForceScrollRef.current ||
-      (atTop && messages.length > 0) ||
-      nearBottom;
+      const shouldScroll =
+        shouldForceScrollRef.current ||
+        (atTop && messages.length > 0) ||
+        nearBottom;
 
-    if (shouldScroll) {
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({
-          behavior: "auto",
-          block: "end",
-        });
-        shouldForceScrollRef.current = false;
-      }, 50);
+      if (shouldScroll) {
+        setTimeout(() => {
+          try {
+            messagesEndRef.current?.scrollIntoView({
+              behavior: "auto",
+              block: "end",
+            });
+            shouldForceScrollRef.current = false;
+          } catch (scrollError) {
+            console.error("[useEffect] Scroll error:", scrollError);
+          }
+        }, 50);
+      }
+    } catch (error) {
+      console.error("[useEffect] Auto-scroll error:", error);
     }
   }, [messages]);
 

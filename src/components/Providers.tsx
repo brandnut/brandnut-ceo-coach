@@ -2,13 +2,18 @@
 
 import { ThemeProvider } from './ThemeProvider'
 import { AppProvider } from '@/contexts/AppContext'
+import { ErrorBoundary } from './ErrorBoundary'
+import { ErrorHandling } from './ErrorHandling'
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider>
-      <AppProvider>
-        {children}
-      </AppProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ErrorHandling />
+      <ThemeProvider>
+        <AppProvider>
+          {children}
+        </AppProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   )
 }
