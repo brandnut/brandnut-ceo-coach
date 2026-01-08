@@ -1,21 +1,17 @@
 'use client'
 
-import { useEffect } from 'react'
-
+/**
+ * ARMS RUM Provider
+ *
+ * DISABLED: @arms/rum-browser depends on rrweb which is incompatible with modern bundlers.
+ * The rrweb library uses CommonJS 'module' object which causes "module is not defined" errors.
+ *
+ * We are using OpenTelemetry for backend monitoring instead.
+ * Frontend monitoring can be re-enabled if a compatible solution is found.
+ *
+ * Alternative: Use ARMS SDK for browser without rrweb dependency, or implement custom error tracking.
+ */
 export default function ARMSRumProvider() {
-  useEffect(() => {
-    // Only initialize ARMS RUM in production
-    // Turbopack has compatibility issues with rrweb (dependency of @arms/rum-browser)
-    if (process.env.NODE_ENV === 'production' && typeof window !== 'undefined') {
-      import('@/lib/monitoring/rum')
-        .then(() => {
-          console.log('[ARMS RUM] Initialized in production')
-        })
-        .catch((error) => {
-          console.error('[ARMS RUM] Failed to initialize:', error)
-        })
-    }
-  }, [])
-
+  // Disabled - see comment above
   return null
 }
