@@ -168,7 +168,7 @@ export function uploadWithRefresh(
             .then(() => upload(2)) // Retry with new token
             .then(resolve)
             .catch(reject);
-        } else if (xhr.status >= 200 && xhr.status < 300) {
+        } else if (xhr.status === 200) {
           resolve(xhr);
         } else {
           reject(new Error(`Upload failed: ${xhr.status}`));
