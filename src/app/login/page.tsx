@@ -40,7 +40,7 @@ export default function LoginPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
-      router.push("/");
+      router.push("/chat");
     }
   }, [isAuthenticated, isLoading, router]);
 
@@ -95,7 +95,7 @@ export default function LoginPage() {
 
       // Manual redirect after successful login
       setTimeout(() => {
-        router.push("/");
+        router.push("/chat");
       }, 1000);
     } catch (error: any) {
       setState((prev) => ({

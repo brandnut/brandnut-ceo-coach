@@ -33,14 +33,12 @@ export async function GET(request: NextRequest) {
     })
 
     // 将 chatConfig 附加到对应的组织上
+    // chatConfig 现在是一个布尔值，表示该组织是否有配置 system_prompt
     const organizationsWithChatConfig = organizationsWithoutRole.map(org => ({
       ...org,
-      chatConfig: chatConfig && chatConfig.organization_id === org.id ? {
-        chat_api_url: chatConfig.chat_api_url,
-        chat_api_key: chatConfig.chat_api_key,
-        organization_name: chatConfig.organization_name,
-        organization_id: chatConfig.organization_id,
-      } : null
+      chatConfig: chatConfig && chatConfig.organization_id === org.id
+        ? !!chatConfig.system_prompt  // 如果有 system_prompt 则返回 true，否则返回 false
+        : false
     }))
 
     return NextResponse.json({

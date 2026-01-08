@@ -115,18 +115,6 @@ export async function POST(request: NextRequest) {
         let aiMessage = null
         let wasAborted = false
         let currentToolCalls: any[] = [] // Track tool calls for saving
-        let lastHeartbeat = Date.now() // Track last heartbeat time
-
-        // Send periodic heartbeat to keep connection alive (every 30s)
-        const heartbeatInterval = setInterval(() => {
-          try {
-            const heartbeatEvent = `: heartbeat\n\n`
-            controller.enqueue(encoder.encode(heartbeatEvent))
-          } catch (err) {
-            // Controller closed, stop heartbeat
-            clearInterval(heartbeatInterval)
-          }
-        }, 30000)
 
         try {
           // Send conversation event (for new conversations)
@@ -220,9 +208,6 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Clear heartbeat interval
-          clearInterval(heartbeatInterval)
-
           // Send done event only if completed normally (not aborted)
           if (aiMessage && !wasAborted) {
             const event = `event: done\ndata: ${JSON.stringify({
@@ -242,9 +227,6 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
-          // Clear heartbeat interval on error
-          clearInterval(heartbeatInterval)
-
           console.error('Streaming error:', error)
           // Log full error object for debugging
           if (error && typeof error === 'object') {

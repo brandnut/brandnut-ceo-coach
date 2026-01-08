@@ -45,12 +45,12 @@ if (process.env.NODE_ENV === 'production') {
   })
 
   // Use batch processor for better performance
-  provider.addSpanProcessor(new BatchSpanProcessor(exporter))
+  ;(provider as any).addSpanProcessor(new BatchSpanProcessor(exporter))
 
   // Optional: Console exporter for debugging
-  // provider.addSpanProcessor(new SimpleSpanProcessor(new ConsoleSpanExporter()))
+  // (provider as any).addSpanProcessor(new SimpleSpanProcessor(new ConsoleSpanExporter()))
 
-  provider.register()
+  ;(provider as any).register()
 
   console.log('[OpenTelemetry] Tracing initialized for production')
 } else {

@@ -88,7 +88,16 @@
       "Bash(grep:*)",
       "Bash(while:*)",
       "Bash(do clear:*)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(xargs -r kill -9)",
+      "Bash(@opentelemetry/api )",
+      "Bash(@opentelemetry/exporter-trace-otlp-proto )",
+      "Bash(@opentelemetry/instrumentation )",
+      "Bash(@opentelemetry/instrumentation-http )",
+      "Bash(@opentelemetry/sdk-trace-node )",
+      "Bash(@opentelemetry/sdk-trace-base )",
+      "Bash(@opentelemetry/resources )",
+      "Bash(@opentelemetry/semantic-conventions)"
     ],
     "deny": [],
     "ask": []
