@@ -62,4 +62,21 @@ if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
     originalInfo.apply(console, args)
     logToFile('info', args.join(' '))
   }
+
+  // Global unhandled exception handler
+  process.on('uncaughtException', (error) => {
+    logToFile('error', `Uncaught Exception: ${error.message}`, {
+      stack: error.stack,
+    })
+    // Give logger time to write, then exit
+    setTimeout(() => process.exit(1), 1000)
+  })
+
+  // Global unhandled promise rejection handler
+  process.on('unhandledRejection', (reason) => {
+    logToFile('error', `Unhandled Rejection: ${String(reason)}`, {
+      reason: String(reason),
+      stack: reason instanceof Error ? reason.stack : undefined,
+    })
+  })
 }
