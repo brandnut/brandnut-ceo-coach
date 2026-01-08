@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "@/components/Providers";
+import ARMSRumProvider from "@/components/ARMSRumProvider";
 import "@ant-design/v5-patch-for-react-19";
 import { appInfo } from "@/config/app";
 import { getAssetUrl } from "@/lib/utils";
@@ -28,6 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <ARMSRumProvider />
         <Providers>{children}</Providers>
       </body>
     </html>

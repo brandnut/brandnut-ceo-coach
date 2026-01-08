@@ -19,6 +19,7 @@
     "@ant-design/icons": "^5.5.2",
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
     "@ant-design/x": "^1.0.11",
+    "@arms/rum-browser": "^0.1.4",
     "@langchain/core": "^1.1.8",
     "@langchain/langgraph": "^1.0.7",
     "@langchain/openai": "^1.2.0",
