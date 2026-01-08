@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '20mb',
     },
+    instrumentationHook: true,  // Enable instrumentation hook
   },
   // Enable standalone output for Docker
   output: 'standalone',
