@@ -121,100 +121,67 @@ export async function authenticatedFetch(
 }
 
 /**
- * Create an authenticated XMLHttpRequest with auto token refresh
+ * Upload file with automatic token refresh on 401
+ * Returns a Promise that resolves with the response
  */
-export function createAuthenticatedXHR(): {
-  xhr: XMLHttpRequest;
-  open: (
-    method: string,
-    url: string,
-    async?: boolean,
-    user?: string | null,
-    password?: string | null
-  ) => void;
-} {
-  const xhr = new XMLHttpRequest();
-  const originalOpen = xhr.open;
-  const originalSend = xhr.send;
-  let hasRefreshed = false;
+export function uploadWithRefresh(
+  url: string,
+  formData: FormData,
+  options: {
+    onProgress?: (percent: number) => void;
+    signal?: AbortSignal;
+  } = {}
+): Promise<XMLHttpRequest> {
+  return new Promise((resolve, reject) => {
+    const upload = async (attemptNumber = 1) => {
+      const xhr = new XMLHttpRequest();
 
-  return {
-    xhr,
-    open: (
-      method: string,
-      url: string,
-      async?: boolean,
-      user?: string | null,
-      password?: string | null
-    ) => {
       // Add Authorization header
       const tokens = getTokens();
       if (tokens) {
         xhr.setRequestHeader("Authorization", `Bearer ${tokens.access_token}`);
       }
 
-      originalOpen.call(xhr, method, url, async ?? true, user, password);
-
-      // Handle 401 response
-      xhr.addEventListener("load", async function () {
-        if (xhr.status === 401 && !hasRefreshed && getTokens()) {
-          hasRefreshed = true;
-
-          try {
-            const newToken = await refreshAccessToken();
-
-            // Retry with new token
-            const retryXhr = new XMLHttpRequest();
-            retryXhr.open(method, url, async ?? true, user, password);
-            retryXhr.setRequestHeader(
-              "Authorization",
-              `Bearer ${newToken}`
-            );
-
-            // Copy all original headers
-            const headers = xhr.getAllResponseHeaders();
-            if (headers) {
-              const headerLines = headers.split("\r\n");
-              headerLines.forEach((line) => {
-                const [name, value] = line.split(": ");
-                if (name && value) {
-                  retryXhr.setRequestHeader(name, value);
-                }
-              });
-            }
-
-            // Copy event listeners
-            retryXhr.addEventListener("load", () => {
-              Object.defineProperty(xhr, "status", { value: retryXhr.status });
-              Object.defineProperty(xhr, "responseText", { value: retryXhr.responseText });
-              Object.defineProperty(xhr, "response", { value: retryXhr.response });
-
-              const event = new Event("load");
-              xhr.dispatchEvent(event);
-            });
-
-            retryXhr.addEventListener("error", () => {
-              const event = new Event("error");
-              xhr.dispatchEvent(event);
-            });
-
-            retryXhr.addEventListener("abort", () => {
-              const event = new Event("abort");
-              xhr.dispatchEvent(event);
-            });
-
-            retryXhr.send((xhr as any)._sentData);
-          } catch (refreshError) {
-            console.error("[API Client] XHR token refresh failed:", refreshError);
-
-            // Clear tokens and redirect to login
-            storage.removeItem(storageKeys.AUTH_TOKENS);
-            if (typeof window !== "undefined") {
-              window.location.href = getApiUrl("/login");
-            }
+      // Track progress
+      if (options.onProgress) {
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const percent = Math.floor((e.loaded / e.total) * 100);
+            options.onProgress?.(percent);
           }
+        };
+      }
+
+      // Handle abort signal
+      if (options.signal) {
+        options.signal.addEventListener("abort", () => {
+          xhr.abort();
+          reject(new DOMException("Aborted", "AbortError"));
+        });
+      }
+
+      // Handle response
+      xhr.onload = () => {
+        if (xhr.status === 401 && attemptNumber === 1) {
+          // Token expired, refresh and retry
+          refreshAccessToken()
+            .then(() => upload(2)) // Retry with new token
+            .then(resolve)
+            .catch(reject);
+        } else if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(xhr);
+        } else {
+          reject(new Error(`Upload failed: ${xhr.status}`));
         }
-      });
-    },
-  };
+      };
+
+      xhr.onerror = () => reject(new Error("Network error"));
+      xhr.onabort = () => reject(new DOMException("Aborted", "AbortError"));
+
+      xhr.open("POST", url);
+      xhr.send(formData);
+    };
+
+    upload();
+  });
 }
