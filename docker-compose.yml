@@ -30,8 +30,8 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
-    labels:
-      - "com.brandnut.logdir=/root/brandnut-ceo-coach/logs"
+    volumes:
+      - ./logs:/app/logs
 
 networks:
   brandnut-net:
