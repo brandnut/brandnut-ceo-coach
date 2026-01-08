@@ -29,7 +29,7 @@ if (process.env.NODE_ENV === 'production') {
       'service.name': 'brandnut-ceo-coach',
       'service.version': '1.0.0',
       'deployment.environment': 'production',
-    },
+    } as any,
   })
 
   // Register HTTP instrumentation (monitors API routes)
