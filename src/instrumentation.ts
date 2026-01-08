@@ -10,7 +10,7 @@
 export async function register() {
   // Initialize OpenTelemetry tracing for backend monitoring
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    await import('@/lib/monitoring/index.ts')
+    await import('@/lib/monitoring/index')
     console.log('[Instrumentation] OpenTelemetry tracing registered')
   }
 }

@@ -5,16 +5,12 @@
  * Reports to Alibaba Cloud ARMS via OTLP.
  */
 
-import { Resource } from '@opentelemetry/resources'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
 import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node'
 import { registerInstrumentations } from '@opentelemetry/instrumentation'
 import { HttpInstrumentation } from '@opentelemetry/instrumentation-http'
 import {
   SemanticResourceAttributes,
-  SEMRESATTRS_SERVICE_NAME,
-  SEMRESATTRS_SERVICE_VERSION,
-  SEMRESATTRS_DEPLOYMENT_ENVIRONMENT,
 } from '@opentelemetry/semantic-conventions'
 import {
   SimpleSpanProcessor,
@@ -29,11 +25,11 @@ if (process.env.NODE_ENV === 'production') {
   // diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG)
 
   const provider = new NodeTracerProvider({
-    resource: new Resource({
-      [SEMRESATTRS_SERVICE_NAME]: 'brandnut-ceo-coach',
-      [SEMRESATTRS_SERVICE_VERSION]: '1.0.0',
-      [SEMRESATTRS_DEPLOYMENT_ENVIRONMENT]: 'production',
-    }),
+    resource: {
+      [SemanticResourceAttributes.SERVICE_NAME]: 'brandnut-ceo-coach',
+      [SemanticResourceAttributes.SERVICE_VERSION]: '1.0.0',
+      [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: 'production',
+    },
   })
 
   // Register HTTP instrumentation (monitors API routes)
