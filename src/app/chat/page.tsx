@@ -19,6 +19,7 @@ import {
 import TutorialModal from "@/components/TutorialModal";
 import Navigation from "@/components/layout/Navigation";
 import { getApiUrl, getAuthHeaders } from "@/lib/utils";
+import { authenticatedFetch } from "@/lib/apiClient";
 import MenuBar, { type MenuBarRef } from "@/components/layout/MenuBar";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import type { UploadFile } from "antd";
@@ -224,13 +225,9 @@ export default function ChatPage() {
     if (!isAuthenticated) return;
 
     try {
-      const headers = {
-        ...getAuthHeaders(storage, storageKeys),
-      };
-
-      const response = await fetch(getApiUrl("/api/agent/dashboard"), {
-        headers,
-      });
+      const response = await authenticatedFetch(
+        getApiUrl("/api/agent/dashboard")
+      );
 
       if (!response.ok) {
         console.error("Failed to load dashboard");
@@ -324,11 +321,9 @@ export default function ChatPage() {
     formData.append("file", file);
 
     try {
-      const headers = getAuthHeaders(storage, storageKeys);
       // Unified upload endpoint handles all file types
-      const response = await fetch(getApiUrl("/api/upload"), {
+      const response = await authenticatedFetch(getApiUrl("/api/upload"), {
         method: "POST",
-        headers,
         body: formData,
       });
 
@@ -564,11 +559,10 @@ export default function ChatPage() {
     try {
       // Get auth headers
       const headers = {
-        ...getAuthHeaders(storage, storageKeys),
         "Content-Type": "application/json",
       };
 
-      const response = await fetch(getApiUrl("/api/agent/chat"), {
+      const response = await authenticatedFetch(getApiUrl("/api/agent/chat"), {
         method: "POST",
         headers,
         body: JSON.stringify({

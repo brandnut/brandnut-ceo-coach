@@ -16,6 +16,7 @@ import {
 import TutorialModal from "@/components/TutorialModal";
 import Navigation from "@/components/layout/Navigation";
 import { getApiUrl, getAuthHeaders } from "@/lib/utils";
+import { authenticatedFetch, createAuthenticatedXHR } from "@/lib/apiClient";
 import FillInDialog from "@/components/FillInDialog";
 import MenuBar, { type MenuBarRef } from "@/components/layout/MenuBar";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
@@ -286,17 +287,8 @@ export default function ChatPage() {
     closeMobileSidebarIfNeeded();
 
     try {
-      // Get auth headers
-      const headers = {
-        ...getAuthHeaders(storage, storageKeys),
-        "Content-Type": "application/json",
-      };
-
-      const response = await fetch(
-        getApiUrl(`/api/conversations/${convId}/messages`),
-        {
-          headers,
-        }
+      const response = await authenticatedFetch(
+        getApiUrl(`/api/conversations/${convId}/messages`)
       );
       if (!response.ok) {
         setMessages([]);
@@ -592,13 +584,11 @@ export default function ChatPage() {
     abortControllerRef.current = new AbortController();
 
     try {
-      // Get auth headers
       const headers = {
-        ...getAuthHeaders(storage, storageKeys),
         "Content-Type": "application/json",
       };
 
-      const response = await fetch(getApiUrl("/api/chat/messages"), {
+      const response = await authenticatedFetch(getApiUrl("/api/chat/messages"), {
         method: "POST",
         headers,
         body: JSON.stringify({
