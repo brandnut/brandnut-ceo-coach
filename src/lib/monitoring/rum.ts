@@ -5,8 +5,8 @@ try {
   armsRum.init({
     endpoint:
       'https://proj-xtrace-1ffb471ca0fe8cdf3e753be2e5750-cn-hangzhou.cn-hangzhou.log.aliyuncs.com/rum/web/v2?workspace=default-cms-1134355607688774-cn-hangzhou&service_id=b63frsmgqu@a1f015d557b4f0ccdcf77',
-    // Set environment
-    env: process.env.NODE_ENV === 'production' ? 'prod' : 'dev',
+    // Set environment (ARMS accepts: 'prod' | 'pre' | 'gray' | 'daily' | 'local')
+    env: process.env.NODE_ENV === 'production' ? 'prod' : 'local',
     // Set SPA routing mode
     spaMode: 'history',
     collectors: {
