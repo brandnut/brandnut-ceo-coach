@@ -26,9 +26,9 @@ if (process.env.NODE_ENV === 'production') {
 
   const provider = new NodeTracerProvider({
     resource: {
-      [SemanticResourceAttributes.SERVICE_NAME]: 'brandnut-ceo-coach',
-      [SemanticResourceAttributes.SERVICE_VERSION]: '1.0.0',
-      [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: 'production',
+      'service.name': 'brandnut-ceo-coach',
+      'service.version': '1.0.0',
+      'deployment.environment': 'production',
     },
   })
 
