@@ -166,8 +166,7 @@ export function uploadWithRefresh(
         if (xhr.status === 401 && attemptNumber === 1) {
           // Token expired, refresh and retry
           refreshAccessToken()
-            .then(() => upload(2)) // Retry with new token
-            .then(resolve)
+            .then(() => upload(2).then(resolve))
             .catch(reject);
         } else if (xhr.status === 200) {
           resolve(xhr);
