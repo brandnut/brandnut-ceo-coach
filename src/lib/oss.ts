@@ -63,13 +63,15 @@ export async function uploadToOSS(
       process,
     })
 
-    return signedUrl
+    // Force HTTPS for LLM providers
+    return signedUrl.replace(/^http:\/\//, 'https://')
   } else {
     // For PDFs and other files, return standard signed URL
     const signedUrl = client.signatureUrl(filename, {
       expires: 604800, // 7 days
     })
 
-    return signedUrl
+    // Force HTTPS for LLM providers
+    return signedUrl.replace(/^http:\/\//, 'https://')
   }
 }
