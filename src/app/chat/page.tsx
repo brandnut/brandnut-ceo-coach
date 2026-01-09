@@ -19,7 +19,7 @@ import {
 import TutorialModal from "@/components/TutorialModal";
 import Navigation from "@/components/layout/Navigation";
 import { getApiUrl, getAuthHeaders } from "@/lib/utils";
-import { authenticatedFetch, uploadWithRefresh } from "@/lib/apiClient";
+import { authenticatedFetch } from "@/lib/apiClient";
 import MenuBar, { type MenuBarRef } from "@/components/layout/MenuBar";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import type { UploadFile } from "antd";
@@ -1120,41 +1120,88 @@ export default function ChatPage() {
                         const formData = new FormData();
                         formData.append("file", file);
 
-                        uploadWithRefresh(getApiUrl("/api/upload"), formData, {
-                          onProgress: (percent) => {
+                        const xhr = new XMLHttpRequest();
+
+                        // Upload progress
+                        xhr.upload.onprogress = (e: ProgressEvent) => {
+                          if (e.lengthComputable) {
+                            const percent = Math.floor(
+                              (e.loaded / e.total) * 100
+                            );
                             setAttachments((prev) =>
                               prev.map((f) =>
                                 f.uid === uid ? { ...f, percent } : f
                               )
                             );
-                          },
-                        })
-                          .then((xhr) => {
-                            const response = JSON.parse(xhr.responseText);
-                            setAttachments((prev) =>
-                              prev.map((f) =>
-                                f.uid === uid
-                                  ? {
-                                      ...f,
-                                      status: "done" as const,
-                                      percent: 100,
-                                      uploadedId: response.id,
-                                      url:
-                                        response.url ||
-                                        URL.createObjectURL(file),
-                                    }
-                                  : f
-                              )
-                            );
-                          })
-                          .catch((error) => {
-                            console.error("Upload error:", error);
-                            setAttachments((prev) =>
-                              prev.map((f) =>
-                                f.uid === uid ? { ...f, status: "error" as const } : f
-                              )
-                            );
-                          });
+                          }
+                        };
+
+                        // Upload complete
+                        xhr.onreadystatechange = () => {
+                          if (xhr.readyState === 4) {
+                            if (xhr.status === 200) {
+                              try {
+                                const response = JSON.parse(xhr.responseText);
+                                setAttachments((prev) =>
+                                  prev.map((f) =>
+                                    f.uid === uid
+                                      ? {
+                                          ...f,
+                                          status: "done" as const,
+                                          percent: 100,
+                                          uploadedId: response.id,
+                                          url:
+                                            response.url ||
+                                            URL.createObjectURL(file),
+                                        }
+                                      : f
+                                  )
+                                );
+                              } catch (e) {
+                                console.error("Upload response error:", e);
+                                setAttachments((prev) =>
+                                  prev.map((f) =>
+                                    f.uid === uid
+                                      ? { ...f, status: "error" as const }
+                                      : f
+                                  )
+                                );
+                              }
+                            } else {
+                              setAttachments((prev) =>
+                                prev.map((f) =>
+                                  f.uid === uid
+                                    ? { ...f, status: "error" as const }
+                                    : f
+                                )
+                              );
+                            }
+                          }
+                        };
+
+                        // Error handling
+                        xhr.onerror = () => {
+                          setAttachments((prev) =>
+                            prev.map((f) =>
+                              f.uid === uid
+                                ? { ...f, status: "error" as const }
+                                : f
+                            )
+                          );
+                        };
+
+                        xhr.open("POST", getApiUrl("/api/upload"));
+
+                        // Add Authorization header
+                        const authHeaders = getAuthHeaders(
+                          storage,
+                          storageKeys
+                        );
+                        Object.entries(authHeaders).forEach(([key, value]) => {
+                          xhr.setRequestHeader(key, value);
+                        });
+
+                        xhr.send(formData);
 
                         return false; // Prevent default upload
                       }}
