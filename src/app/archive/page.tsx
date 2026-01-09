@@ -16,7 +16,7 @@ import {
 import TutorialModal from "@/components/TutorialModal";
 import Navigation from "@/components/layout/Navigation";
 import { getApiUrl, getAuthHeaders } from "@/lib/utils";
-import { authenticatedFetch, createAuthenticatedXHR } from "@/lib/apiClient";
+import { authenticatedFetch } from "@/lib/apiClient";
 import FillInDialog from "@/components/FillInDialog";
 import MenuBar, { type MenuBarRef } from "@/components/layout/MenuBar";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
