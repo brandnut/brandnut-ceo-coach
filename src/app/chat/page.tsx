@@ -236,6 +236,13 @@ export default function ChatPage() {
       }
 
       const data = await response.json();
+
+      // If dashboard is still generating questions, show empty state
+      if (data.isGenerating) {
+        setDashboardQuestions(null);
+        return;
+      }
+
       setDashboardQuestions(data.questions);
     } catch (error) {
       console.error("Error loading dashboard:", error);
