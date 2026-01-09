@@ -79,15 +79,16 @@ export async function authenticatedFetch(
 ): Promise<Response> {
   // Add Authorization header
   const tokens = getTokens();
+  const initWithAuth: RequestInit = init || {};
+
   if (tokens) {
-    init = init || {};
-    init.headers = {
-      ...(init.headers as Record<string, string>),
+    initWithAuth.headers = {
+      ...(initWithAuth.headers as Record<string, string>),
       Authorization: `Bearer ${tokens.access_token}`,
     };
   }
 
-  const response = await fetch(input, init);
+  const response = await fetch(input, initWithAuth);
 
   // If 401, try to refresh token and retry
   if (response.status === 401 && tokens) {
@@ -95,10 +96,10 @@ export async function authenticatedFetch(
       const newToken = await refreshAccessToken();
 
       // Retry original request with new token
-      const retryInit = {
-        ...init,
+      const retryInit: RequestInit = {
+        ...initWithAuth,
         headers: {
-          ...(init.headers as Record<string, string>),
+          ...(initWithAuth.headers as Record<string, string>),
           Authorization: `Bearer ${newToken}`,
         },
       };
