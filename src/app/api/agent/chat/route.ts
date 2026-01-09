@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Parse request
     const body: ChatRequest = await request.json()
-    const { message, conversationId, attachment_ids } = body
+    const { message, conversationId, attachment_ids, attachments: clientAttachments } = body
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json(
@@ -42,10 +42,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 3. Query file extractions if attachment_ids provided
+    // 3. Handle attachments
     let attachments: Attachment[] = []
     let injected_content: string | undefined = undefined
 
+    // 3a. Process attachment_ids (text documents with extracted text)
     if (attachment_ids && attachment_ids.length > 0) {
       const extractions = await getFileExtractions(attachment_ids)
 
@@ -64,6 +65,11 @@ export async function POST(request: NextRequest) {
       )
 
       injected_content = [...fileParts, message].join('\n\n')
+    }
+
+    // 3b. Process client attachments (images/PDFs for multimodal)
+    if (clientAttachments && clientAttachments.length > 0) {
+      attachments = [...attachments, ...clientAttachments]
     }
 
     // 4. Get or create conversation

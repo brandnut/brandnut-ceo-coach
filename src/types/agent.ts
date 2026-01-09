@@ -103,6 +103,7 @@ export interface ChatRequest {
   message: string
   conversationId?: string
   attachment_ids?: string[] // File extraction IDs for document uploads
+  attachments?: Attachment[] // Images/PDFs for multimodal
 }
 
 export interface ConversationListResponse {
