@@ -845,7 +845,7 @@ export default function ChatPage() {
                       </p>
                       <span className="spinner-large"></span>
                     </div>
-                  ) : dashboardQuestions === null ? (
+                  ) : !dashboardQuestions || Object.keys(dashboardQuestions).length === 0 ? (
                     <div className="flex flex-col items-center gap-4">
                       <p className="text-base font-medium">
                         {welcomeText.startNewConversation}
