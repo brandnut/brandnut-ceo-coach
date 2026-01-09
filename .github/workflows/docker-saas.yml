@@ -10,7 +10,7 @@ env:
   # 阿里云地址
   REGISTRY: registry.cn-hangzhou.aliyuncs.com
   # 命名空间/仓库名
-  IMAGE_NAME: brandnut/brandnut-ceo-coach:latest
+  IMAGE_NAME: brandnut/brandnut-ceo-coach
 
 jobs:
   build:
