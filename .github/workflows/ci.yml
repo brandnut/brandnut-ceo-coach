@@ -101,23 +101,46 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Extract metadata (main branch)
+        if: github.ref == 'refs/heads/main'
+        id: meta-main
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_REGISTRY_URL }}/brandnut/brandnut-ceo-coach
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - name: Extract metadata (saas branch)
+        if: github.ref == 'refs/heads/saas'
+        id: meta-saas
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_REGISTRY_URL }}/brandnut/brandnut-ceo-coach
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=saas
+
       - name: Build and push image
-        run: |
-          IMAGE=${{ secrets.DOCKER_REGISTRY_URL }}/brandnut/brandnut-ceo-coach
-          TAG=${{ steps.branch.outputs.tag }}
-          docker build -t ${IMAGE}:${{ github.sha }} \
-            --build-arg DIFY_API_URL=${{ secrets.DIFY_API_URL }} \
-            --build-arg DIFY_API_KEY=${{ secrets.DIFY_API_KEY }} \
-            --build-arg NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }} \
-            --build-arg NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }} \
-            --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }} \
-            --build-arg REDIS_URL=${{ secrets.REDIS_URL }} \
-            --build-arg GUEST_MODE_ENABLED=${{ vars.GUEST_MODE_ENABLED }} \
-            --build-arg NEXT_PUBLIC_BASE_PATH=${{ vars.NEXT_PUBLIC_BASE_PATH }} \
-            .
-          docker tag ${IMAGE}:${{ github.sha }} ${IMAGE}:${TAG}
-          docker push ${IMAGE}:${{ github.sha }}
-          docker push ${IMAGE}:${TAG}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta-main.outputs.tags || steps.meta-saas.outputs.tags }}
+          labels: ${{ steps.meta-main.outputs.labels || steps.meta-saas.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            DIFY_API_URL=${{ secrets.DIFY_API_URL }}
+            DIFY_API_KEY=${{ secrets.DIFY_API_KEY }}
+            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+            NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            REDIS_URL=${{ secrets.REDIS_URL }}
+            GUEST_MODE_ENABLED=${{ vars.GUEST_MODE_ENABLED }}
+            NEXT_PUBLIC_BASE_PATH=${{ vars.NEXT_PUBLIC_BASE_PATH }}
 
       - name: Deploy to production (main branch)
         if: github.ref == 'refs/heads/main'
@@ -131,24 +154,24 @@ jobs:
             git reset --hard
             git pull origin main
             docker login -u ${{ secrets.DOCKER_USERNAME }} -p '${{ secrets.DOCKER_PASSWORD }}' ${{ secrets.DOCKER_REGISTRY_URL }}
-            docker pull ${{ secrets.DOCKER_REGISTRY_URL }}/brandnut/brandnut-ceo-coach:${{ github.sha }}
+            docker pull ${{ secrets.DOCKER_REGISTRY_URL }}/brandnut/brandnut-ceo-coach:latest
             docker compose down
-            DOCKER_REGISTRY_URL=${{ secrets.DOCKER_REGISTRY_URL }} GITHUB_SHA=${{ github.sha }} docker compose up -d
+            DOCKER_REGISTRY_URL=${{ secrets.DOCKER_REGISTRY_URL }} IMAGE_TAG=latest docker compose up -d
             docker image prune -a -f
 
       - name: Deploy to saas (saas branch)
         if: github.ref == 'refs/heads/saas'
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SAAS_HOST }}
-          username: ${{ secrets.SAAS_USERNAME }}
-          key: ${{ secrets.SAAS_SSH_KEY }}
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_SSH_KEY }}
           script: |
             cd /root/cicd/brandnut-ceo-coach
             git reset --hard
             git pull origin saas
             docker login -u ${{ secrets.DOCKER_USERNAME }} -p '${{ secrets.DOCKER_PASSWORD }}' ${{ secrets.DOCKER_REGISTRY_URL }}
-            docker pull ${{ secrets.DOCKER_REGISTRY_URL }}/brandnut/brandnut-ceo-coach:${{ github.sha }}
+            docker pull ${{ secrets.DOCKER_REGISTRY_URL }}/brandnut/brandnut-ceo-coach:saas
             docker compose down
-            DOCKER_REGISTRY_URL=${{ secrets.DOCKER_REGISTRY_URL }} GITHUB_SHA=${{ github.sha }} docker compose up -d
+            DOCKER_REGISTRY_URL=${{ secrets.DOCKER_REGISTRY_URL }} IMAGE_TAG=saas docker compose up -d
             docker image prune -a -f

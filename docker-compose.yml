@@ -1,6 +1,6 @@
 services:
   app:
-    image: ${DOCKER_REGISTRY_URL}/brandnut/brandnut-ceo-coach:${GITHUB_SHA:-latest}
+    image: ${DOCKER_REGISTRY_URL}/brandnut/brandnut-ceo-coach:${IMAGE_TAG:-latest}
     container_name: brandnut-ceo-coach
     ports:
       - "3005:3000"
