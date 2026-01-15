@@ -8,7 +8,7 @@ on:
 
 env:
   # 阿里云地址
-  REGISTRY: registry.cn-hangzhou.aliyuncs.com
+  REGISTRY: ${{ secrets.DOCKER_REGISTRY_URL }}
   # 命名空间/仓库名
   IMAGE_NAME: brandnut/brandnut-ceo-coach
 
