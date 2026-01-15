@@ -2,11 +2,12 @@
  * File Text Extraction Library
  *
  * Extracts plain text from uploaded documents for LLM context injection.
- * Supports: txt, docx, xlsx
+ * Supports: txt, docx, xlsx, pptx
  */
 
 import mammoth from 'mammoth'
 import * as XLSX from 'xlsx'
+import PptxParser from 'node-pptx-parser'
 
 const MAX_TEXT_SIZE = 500 * 1024 // 500KB limit for extracted text
 const TRUNCATION_MESSAGE = '\n\n[注：文件内容已截断，如需完整内容请分段询问]'
@@ -18,6 +19,7 @@ export const SUPPORTED_FILE_TYPES = {
   txt: 'text/plain',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 }
 
 /**
@@ -32,6 +34,8 @@ export function getMimeTypeFromExtension(fileName: string): string {
       return SUPPORTED_FILE_TYPES.docx
     case 'xlsx':
       return SUPPORTED_FILE_TYPES.xlsx
+    case 'pptx':
+      return SUPPORTED_FILE_TYPES.pptx
     default:
       return 'application/octet-stream'
   }
@@ -63,6 +67,10 @@ export async function extractText(
 
     case SUPPORTED_FILE_TYPES.xlsx:
       text = extractFromXlsx(file)
+      break
+
+    case SUPPORTED_FILE_TYPES.pptx:
+      text = await extractFromPptx(file)
       break
 
     default:
@@ -115,6 +123,51 @@ function extractFromXlsx(file: Buffer | ArrayBuffer): string {
   })
 
   return sheets.join('\n\n')
+}
+
+/**
+ * PPTX
+ * Format: "Slide 1:\nContent\n\nSlide 2:\nContent"
+ */
+async function extractFromPptx(file: Buffer | ArrayBuffer): Promise<string> {
+  const buffer = Buffer.isBuffer(file) ? file : Buffer.from(file)
+  const fs = await import('fs/promises')
+  const os = await import('os')
+  const path = await import('path')
+
+  // Create temp file
+  const tempDir = os.tmpdir()
+  const tempFilePath = path.join(tempDir, `temp-${Date.now()}-${Math.random().toString(36).substring(7)}.pptx`)
+
+  try {
+    // Write buffer to temp file
+    await fs.writeFile(tempFilePath, buffer)
+
+    // Parse PPTX
+    const parser = new PptxParser(tempFilePath)
+    const slides = await parser.extractText()
+
+    // Format output - each slide has a text array
+    const formattedSlides = slides
+      .map((slide, index) => {
+        const slideText = slide.text
+          .map((block: string) => block.trim())
+          .filter((block: string) => block.length > 0)
+          .join('\n')
+
+        return slideText.length > 0 ? `Slide ${index + 1}:\n${slideText}` : ''
+      })
+      .filter((slideText: string) => slideText.length > 0)
+
+    return formattedSlides.length > 0 ? formattedSlides.join('\n\n') : '[No text content found in presentation]'
+  } finally {
+    // Clean up temp file
+    try {
+      await fs.unlink(tempFilePath)
+    } catch {
+      // Ignore cleanup errors
+    }
+  }
 }
 
 /**

@@ -27,10 +27,11 @@ const ALLOWED_TYPES = {
   'text/plain': '.txt',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
 }
 
 // Text document extensions (for fallback detection)
-const TEXT_EXTENSIONS = ['.txt', '.docx', '.xlsx']
+const TEXT_EXTENSIONS = ['.txt', '.docx', '.xlsx', '.pptx']
 
 // Max file sizes
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
