@@ -1,0 +1,154 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - "release-*"
+    tags:
+      - "v*"
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Build application
+        run: npm run build
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        run: |
+          docker build -t brandnut-ceo-coach:${{ github.sha }} .
+
+  deploy-validate:
+    runs-on: ubuntu-latest
+    needs: docker-build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Compose
+        run: |
+          docker compose version | cat
+
+      - name: Build and start stack
+        run: |
+          docker compose up -d --build
+          sleep 10
+
+      - name: Check health endpoint
+        run: |
+          curl -f http://localhost:3005/ceo/api/health || curl -f http://localhost:3000/ceo/api/health
+
+      - name: Teardown
+        if: always()
+        run: |
+          docker compose down -v
+
+  # CD阶段 - 对main分支和saas分支生效
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [test, docker-build, deploy-validate]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/saas'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set branch name and image tag
+        id: branch
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "tag=latest" >> $GITHUB_OUTPUT
+            echo "env=production" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/saas" ]]; then
+            echo "tag=saas" >> $GITHUB_OUTPUT
+            echo "env=saas" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.DOCKER_REGISTRY_URL }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push image
+        run: |
+          IMAGE=${{ secrets.DOCKER_REGISTRY_URL }}/brandnut/brandnut-ceo-coach
+          TAG=${{ steps.branch.outputs.tag }}
+          docker build -t ${IMAGE}:${{ github.sha }} \
+            --build-arg DIFY_API_URL=${{ secrets.DIFY_API_URL }} \
+            --build-arg DIFY_API_KEY=${{ secrets.DIFY_API_KEY }} \
+            --build-arg NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }} \
+            --build-arg NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }} \
+            --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }} \
+            --build-arg REDIS_URL=${{ secrets.REDIS_URL }} \
+            --build-arg GUEST_MODE_ENABLED=${{ vars.GUEST_MODE_ENABLED }} \
+            --build-arg NEXT_PUBLIC_BASE_PATH=${{ vars.NEXT_PUBLIC_BASE_PATH }} \
+            .
+          docker tag ${IMAGE}:${{ github.sha }} ${IMAGE}:${TAG}
+          docker push ${IMAGE}:${{ github.sha }}
+          docker push ${IMAGE}:${TAG}
+
+      - name: Deploy to production (main branch)
+        if: github.ref == 'refs/heads/main'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            cd /root/cicd/brandnut-ceo-coach
+            git reset --hard
+            git pull origin main
+            docker login -u ${{ secrets.DOCKER_USERNAME }} -p '${{ secrets.DOCKER_PASSWORD }}' ${{ secrets.DOCKER_REGISTRY_URL }}
+            docker pull ${{ secrets.DOCKER_REGISTRY_URL }}/brandnut/brandnut-ceo-coach:${{ github.sha }}
+            docker compose down
+            DOCKER_REGISTRY_URL=${{ secrets.DOCKER_REGISTRY_URL }} GITHUB_SHA=${{ github.sha }} docker compose up -d
+            docker image prune -a -f
+
+      - name: Deploy to saas (saas branch)
+        if: github.ref == 'refs/heads/saas'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SAAS_HOST }}
+          username: ${{ secrets.SAAS_USERNAME }}
+          key: ${{ secrets.SAAS_SSH_KEY }}
+          script: |
+            cd /root/cicd/brandnut-ceo-coach
+            git reset --hard
+            git pull origin saas
+            docker login -u ${{ secrets.DOCKER_USERNAME }} -p '${{ secrets.DOCKER_PASSWORD }}' ${{ secrets.DOCKER_REGISTRY_URL }}
+            docker pull ${{ secrets.DOCKER_REGISTRY_URL }}/brandnut/brandnut-ceo-coach:${{ github.sha }}
+            docker compose down
+            DOCKER_REGISTRY_URL=${{ secrets.DOCKER_REGISTRY_URL }} GITHUB_SHA=${{ github.sha }} docker compose up -d
+            docker image prune -a -f
