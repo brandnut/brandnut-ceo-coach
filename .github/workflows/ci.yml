@@ -34,7 +34,7 @@ jobs:
   # CD阶段 - 对main分支和saas分支生效
   deploy:
     runs-on: ubuntu-latest
-    needs: [test, docker-build, deploy-validate]
+    needs: [test]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/saas'
     steps:
       - name: Checkout
