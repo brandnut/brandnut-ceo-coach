@@ -14,11 +14,14 @@ export interface AgentState {
   // Organization config
   systemPrompt?: string
   modelName?: string
+  // File attachments (text document IDs for RAG)
+  attachmentIds?: string[]
   // Request metadata
   requestMetadata?: {
     timestamp: number
     ip?: string
     memoryContext?: string // Memory lookup result for logging
+    ragContext?: string // RAG retrieval result for logging
   }
   // Original user message (before memory augmentation)
   originalUserMessage?: string
@@ -39,6 +42,7 @@ export const agentStateAnnotation = Annotation.Root({
   conversationId: Annotation<string>(),
   systemPrompt: Annotation<string | undefined>(),
   modelName: Annotation<string | undefined>(),
-  requestMetadata: Annotation<{ timestamp: number; ip?: string; memoryContext?: string } | undefined>(),
+  attachmentIds: Annotation<string[] | undefined>(),
+  requestMetadata: Annotation<{ timestamp: number; ip?: string; memoryContext?: string; ragContext?: string } | undefined>(),
   originalUserMessage: Annotation<string | undefined>(),
 })

@@ -5,7 +5,7 @@
  * (preprocess → agent → postprocess)
  */
 
-import { HumanMessage, AIMessage, SystemMessage, ToolMessage, BaseMessage } from '@langchain/core/messages'
+import { HumanMessage, AIMessage, SystemMessage, BaseMessage } from '@langchain/core/messages'
 import { Message, Attachment } from '@/types/agent'
 import { createAgentGraph } from './graph'
 import { streamAgentResponse } from './stream'
@@ -123,6 +123,7 @@ export async function* streamChatResponseGraph(
     conversationId: string
     modelName?: string
     systemPrompt?: string
+    attachmentIds?: string[]
   }
 ): AsyncGenerator<string | Record<string, any>, void, unknown> {
   // Convert to LangChain format
@@ -135,6 +136,7 @@ export async function* streamChatResponseGraph(
     conversationId: options.conversationId,
     systemPrompt: options.systemPrompt,
     modelName: options.modelName,
+    attachmentIds: options.attachmentIds,
   }
 
   // Create and run graph

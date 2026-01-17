@@ -6,9 +6,8 @@
 
 import fs from 'fs'
 import path from 'path'
-import { spawn } from 'child_process'
 
-const LOG_DIR = '/app/logs'
+const LOG_DIR = process.env.LOG_DIR || path.join(process.cwd(), 'logs')
 const LOG_FILE = path.join(LOG_DIR, 'app.log')
 
 // Ensure log directory exists
@@ -18,6 +17,7 @@ if (typeof window === 'undefined') {
       fs.mkdirSync(LOG_DIR, { recursive: true })
     }
   } catch (err) {
+    // Fail silently - logging is optional
     console.error('Failed to create log directory:', err)
   }
 }

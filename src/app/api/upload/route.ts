@@ -12,6 +12,7 @@ import { getCurrentUser, createAuthErrorResponse } from '@/lib/auth-middleware'
 import { uploadToOSS } from '@/lib/oss'
 import { extractText, isSupportedFileType } from '@/lib/file-extractors'
 import { saveFileExtraction } from '@/lib/db/file-queries'
+import { triggerFileProcessing } from '@/lib/rag/file-processor'
 
 // Allowed file types and their extensions
 const ALLOWED_TYPES = {
@@ -135,6 +136,10 @@ export async function POST(request: NextRequest) {
         mimeType: file.type,
         fileSize: file.size,
       })
+
+      // Trigger RAG processing asynchronously (fire and forget)
+      // This will generate summary and create vector index for long files
+      triggerFileProcessing(extraction.id)
 
       // Return file ID (for attachment_ids)
       return NextResponse.json({

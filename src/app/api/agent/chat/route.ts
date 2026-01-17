@@ -139,6 +139,7 @@ export async function POST(request: NextRequest) {
               conversationId: convId,
               modelName,
               systemPrompt,
+              attachmentIds: attachment_ids,
             })) {
               // Handle different event types
               if (typeof delta === 'string') {

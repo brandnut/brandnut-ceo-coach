@@ -1,13 +1,16 @@
 /**
  * Preprocess Node
  *
- * Pre-LLM hooks: system prompt injection, memory lookup, request logging, etc.
+ * Pre-LLM hooks: system prompt injection, memory lookup, request logging, RAG retrieval.
  */
 
-import { SystemMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
+import { SystemMessage, HumanMessage } from '@langchain/core/messages'
 import { BaseMessage } from '@langchain/core/messages'
 import { AgentState } from '../state'
 import { searchMemory, formatMemoryContext } from '@/lib/memory/client'
+import { searchSimilarChunks, searchCrossConversations } from '@/lib/rag/vector-db'
+import { getFileExtractions } from '@/lib/db/file-queries'
+import { getRAGConfig } from '@/lib/rag/config'
 
 export async function preprocessNode(state: AgentState): Promise<Partial<AgentState>> {
   console.log('[Preprocess] Starting preprocessing', {
@@ -94,25 +97,101 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
           memoryContext = formatMemoryContext(memoryData)
 
           if (memoryContext) {
-            // Insert memory context directly into the HumanMessage content
-            const augmentedContent = `${memoryContext}\n---\n\n${query}`
-            messages.push(new HumanMessage(augmentedContent))
-
             console.log('[Preprocess] Injected memory context (preferences only):', {
               preferences: memoryData.preference_detail_list.length,
             })
-          } else {
-            // No memory context, add original human message
-            messages.push(lastMessage)
           }
-        } else {
-          // No memory data, add original human message
-          messages.push(lastMessage)
         }
-      } else {
-        // Empty query, add original human message
-        messages.push(lastMessage)
       }
+    }
+  }
+
+  // 5. RAG retrieval - search relevant file chunks
+  let ragContext = ''
+  const config = getRAGConfig()
+
+  if (config.features.enableRAG && state.conversationId && state.messages.length > 0) {
+    const lastMessage = state.messages[state.messages.length - 1]
+
+    if (lastMessage && lastMessage._getType() === 'human') {
+      const query = typeof lastMessage.content === 'string' ? lastMessage.content : ''
+
+      if (query && state.attachmentIds && state.attachmentIds.length > 0) {
+        console.log('[Preprocess] RAG search for attachments:', state.attachmentIds)
+
+        try {
+          // Search current attachments first (highest priority)
+          const currentResults = await searchSimilarChunks(query, {
+            conversationId: state.conversationId,
+            fileIds: state.attachmentIds,
+            maxResults: config.retrieval.currentConvMaxResults,
+            threshold: config.retrieval.currentConvThreshold
+          })
+
+          console.log('[Preprocess] Current conversation RAG results:', currentResults.length)
+
+          if (currentResults.length > 0) {
+            const formattedChunks = currentResults.map((r) =>
+              `[来自: ${r.file_name}, 相似度: ${(r.similarity * 100).toFixed(0)}%]\n${r.chunk_text}`
+            ).join('\n\n---\n\n')
+
+            ragContext = `\n\n[上传文档中的相关内容]\n${formattedChunks}`
+          }
+
+          // Cross-conversation search (if enabled and no current results)
+          if (config.retrieval.crossConvEnabled && currentResults.length < 3) {
+            console.log('[Preprocess] Cross-conversation RAG search')
+
+            const crossResults = await searchCrossConversations(
+              query,
+              state.conversationId,
+              {
+                maxResults: config.retrieval.crossConvMaxResults,
+                threshold: config.retrieval.crossConvThreshold
+              }
+            )
+
+            console.log('[Preprocess] Cross-conversation RAG results:', crossResults.length)
+
+            if (crossResults.length > 0) {
+              const formattedCrossChunks = crossResults.map((r) =>
+                `[来自历史对话: ${r.file_name}, 相似度: ${(r.similarity * 100).toFixed(0)}%]\n${r.chunk_text}`
+              ).join('\n\n---\n\n')
+
+              ragContext += `\n\n[历史文档中的相关内容]\n${formattedCrossChunks}`
+            }
+          }
+        } catch (error) {
+          console.error('[Preprocess] RAG search failed:', error)
+          // Don't fail the entire request if RAG fails
+        }
+      }
+    }
+  }
+
+  // 6. Build final augmented message
+  if (state.userId && state.conversationId && state.messages.length > 0) {
+    const lastMessage = state.messages[state.messages.length - 1]
+
+    if (lastMessage && lastMessage._getType() === 'human') {
+      const query = typeof lastMessage.content === 'string' ? lastMessage.content : ''
+
+      // Build augmented content: memory + RAG + original query
+      const contexts: string[] = []
+      if (memoryContext) contexts.push(memoryContext)
+      if (ragContext) contexts.push(ragContext)
+
+      let augmentedContent = query
+      if (contexts.length > 0) {
+        augmentedContent = contexts.join('\n\n---\n\n') + `\n\n---\n\n${query}`
+      }
+
+      messages.push(new HumanMessage(augmentedContent))
+      console.log('[Preprocess] Final augmentation:', {
+        hasMemory: !!memoryContext,
+        hasRAG: !!ragContext,
+        totalLength: augmentedContent.length
+      })
     } else if (lastMessage) {
       // Not a HumanMessage (e.g., AIMessage), add as-is
       messages.push(lastMessage)
@@ -125,12 +204,13 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
     }
   }
 
-  // 5. Return new messages (system prompt + history + augmented last message)
+  // 7. Return new messages (system prompt + history + augmented last message)
   return {
     messages,
     requestMetadata: {
       ...requestMetadata,
       memoryContext,
+      ragContext,
     },
     originalUserMessage,
   }

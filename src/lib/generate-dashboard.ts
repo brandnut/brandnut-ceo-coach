@@ -38,7 +38,8 @@ export async function generateDashboardQuestions(
   const systemPrompt = orgConfig?.system_prompt || '你是一位CEO教练'
 
   // 2. Get user memories from memtensor (using temp conversationId)
-  const tempConversationId = `dashboard-${Date.now()}`
+  // Note: searchMemory needs a valid UUID, so we generate one
+  const tempConversationId = crypto.randomUUID()
   const memoryData = await searchMemory(
     userId,
     tempConversationId,
