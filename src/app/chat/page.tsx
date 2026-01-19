@@ -505,9 +505,28 @@ export default function ChatPage() {
     // 1. Text documents (txt/docx/xlsx) -> use attachment_ids
     // 2. Images/PDFs -> use attachments (multimodal)
     const textDocumentIds = attachments
-      .filter(() => false)
+      .filter((f) => f.uploadedId)  // Get attachments with uploadedId
+      .filter((f) => {
+        // 只包含 UUID 格式的 uploadedId
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(f.uploadedId || '')
+        console.log('[Chat Page] Attachment:', {
+          name: f.name,
+          uploadedId: f.uploadedId,
+          isUUID,
+          mimeType: f.type
+        })
+        return isUUID
+      })
       .map((f) => f.uploadedId!)
       .filter((id): id is string => !!id);
+
+    console.log('[Chat Page] textDocumentIds:', textDocumentIds)
+    console.log('[Chat Page] All attachments:', attachments.map(a => ({
+      name: a.name,
+      hasUploadedId: !!a.uploadedId,
+      uploadedId: a.uploadedId,
+      mimeType: a.type
+    })))
 
     const agentAttachments: Attachment[] = attachments
       .filter(
@@ -1094,7 +1113,7 @@ export default function ChatPage() {
                     <Upload
                       multiple
                       showUploadList={false}
-                      accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,image/png,image/jpeg,image/jpg,image/webp,image/gif,application/pdf"
+                      accept=".pdf,.txt,.docx,.xlsx,.pptx,.png,.jpg,.jpeg,.webp,.gif,image/png,image/jpeg,image/jpg,image/webp,image/gif,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation"
                       disabled={isStreaming}
                       maxCount={10}
                       beforeUpload={(file) => {

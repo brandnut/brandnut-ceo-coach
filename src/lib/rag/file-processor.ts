@@ -76,7 +76,7 @@ ${textToSummarize}
 
   try {
     const response = await client.chat.completions.create({
-      model: 'anthropic/claude-3.5-sonnet',  // Or use 'openai/gpt-4o-mini'
+      model: 'qwen/qwen-2.5-72b-instruct',  // Or use 'openai/gpt-4o-mini'
       messages: [
         {
           role: 'system',

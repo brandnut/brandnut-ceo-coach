@@ -1,8 +1,7 @@
 /**
  * Embeddings Client using OpenRouter
  *
- * Generates embeddings using OpenRouter's OpenAI-compatible API.
- * Model: openai/text-embedding-3-small (1536 dimensions)
+ * Model: baai/bge-m3 (1024 dimensions)
  */
 
 import OpenAI from 'openai'
@@ -44,7 +43,7 @@ function getClient(): OpenAI {
  *
  * @param text - Input text to embed
  * @param options - Optional timeout setting
- * @returns Embedding vector (1536 dimensions)
+ * @returns Embedding vector (1024 dimensions)
  */
 export async function generateEmbedding(
   text: string,
@@ -59,6 +58,9 @@ export async function generateEmbedding(
   try {
     const client = getClient()
 
+    console.log('[Embeddings] Requesting embedding for text:', text.substring(0, 50) + '...')
+    console.log('[Embeddings] Using model:', config.embedding.model)
+
     const response = await client.embeddings.create({
       model: config.embedding.model,
       input: text,
@@ -66,7 +68,14 @@ export async function generateEmbedding(
       timeout: options?.timeout || 30000,  // 30 seconds default
     })
 
+    console.log('[Embeddings] Response received:', {
+      hasData: !!response.data,
+      dataLength: response.data?.length,
+      firstItem: response.data?.[0]
+    })
+
     if (!response.data || response.data.length === 0) {
+      console.error('[Embeddings] Full response:', JSON.stringify(response, null, 2))
       throw new Error('Empty response from embeddings API')
     }
 
@@ -79,11 +88,13 @@ export async function generateEmbedding(
       )
     }
 
+    console.log('[Embeddings] Successfully generated embedding with dimension:', embedding.length)
     return embedding
   } catch (error) {
     if (error instanceof Error) {
       // Log error details for debugging
       console.error('[Embeddings] Error generating embedding:', error.message)
+      console.error('[Embeddings] Error stack:', error.stack)
 
       // Add context
       if (error.message.includes('401')) {

@@ -9,7 +9,7 @@ export interface RAGConfig {
   // Embedding model configuration
   embedding: {
     model: string              // Model identifier for OpenRouter
-    dimensions: number         // Vector dimension (1536 for text-embedding-3-small)
+    dimensions: number         // Vector dimension (1024 for baai/bge-m3)
     batchSize: number         // Number of texts to embed in one request
   }
 
@@ -52,9 +52,9 @@ export interface RAGConfig {
  */
 const defaultConfig: RAGConfig = {
   embedding: {
-    model: 'openai/text-embedding-3-small',
-    dimensions: 1536,
-    batchSize: 100,  // OpenAI allows up to 2048 texts per request
+    model: 'baai/bge-m3',
+    dimensions: 1024,
+    batchSize: 100, 
   },
 
   chunking: {
