@@ -13,10 +13,6 @@ export interface EmbeddingResult {
   index: number
 }
 
-export interface EmbeddingOptions {
-  timeout?: number  // Request timeout in milliseconds
-}
-
 /**
  * Embeddings client singleton
  */
@@ -42,13 +38,9 @@ function getClient(): OpenAI {
  * Generate embedding for a single text
  *
  * @param text - Input text to embed
- * @param options - Optional timeout setting
  * @returns Embedding vector (1024 dimensions)
  */
-export async function generateEmbedding(
-  text: string,
-  options?: EmbeddingOptions
-): Promise<number[]> {
+export async function generateEmbedding(text: string): Promise<number[]> {
   const config = getRAGConfig()
 
   if (!text || text.trim().length === 0) {
@@ -65,14 +57,13 @@ export async function generateEmbedding(
       model: config.embedding.model,
       input: text,
       encoding_format: 'float',  // Use float format
-      timeout: options?.timeout || 30000,  // 30 seconds default
     })
 
-    console.log('[Embeddings] Response received:', {
-      hasData: !!response.data,
-      dataLength: response.data?.length,
-      firstItem: response.data?.[0]
-    })
+    // console.log('[Embeddings] Response received:', {
+    //   hasData: !!response.data,
+    //   dataLength: response.data?.length,
+    //   firstItem: response.data?.[0]
+    // })
 
     if (!response.data || response.data.length === 0) {
       console.error('[Embeddings] Full response:', JSON.stringify(response, null, 2))
@@ -113,13 +104,9 @@ export async function generateEmbedding(
  * Generate embeddings for multiple texts (batch processing)
  *
  * @param texts - Array of texts to embed
- * @param options - Optional timeout setting
  * @returns Array of embedding results with text, embedding, and index
  */
-export async function generateEmbeddings(
-  texts: string[],
-  options?: EmbeddingOptions
-): Promise<EmbeddingResult[]> {
+export async function generateEmbeddings(texts: string[]): Promise<EmbeddingResult[]> {
   const config = getRAGConfig()
 
   if (!texts || texts.length === 0) {
@@ -135,7 +122,7 @@ export async function generateEmbeddings(
 
   // If only one text, use single embedding function
   if (validTexts.length === 1) {
-    const embedding = await generateEmbedding(validTexts[0], options)
+    const embedding = await generateEmbedding(validTexts[0])
     return [{
       text: validTexts[0],
       embedding,
@@ -158,7 +145,6 @@ export async function generateEmbeddings(
         model: config.embedding.model,
         input: batch,
         encoding_format: 'float',
-        timeout: options?.timeout || 60000,  // Longer timeout for batches
       })
 
       if (!response.data || response.data.length !== batch.length) {

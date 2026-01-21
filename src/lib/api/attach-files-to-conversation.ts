@@ -35,6 +35,14 @@ export async function POST(
       fileIds
     })
 
+    // Check pool availability
+    if (!pool) {
+      return NextResponse.json(
+        { error: 'Database not available', message: 'Database connection not initialized' },
+        { status: 500 }
+      )
+    }
+
     // Insert attachments (ignore duplicates)
     const query = `
       INSERT INTO conversation_attachments (conversation_id, file_extraction_id)

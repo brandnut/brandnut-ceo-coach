@@ -37,6 +37,16 @@ export interface SearchOptions {
 }
 
 /**
+ * Helper function to ensure pool is available
+ */
+function getPool() {
+  if (!pool) {
+    throw new Error('Database not available')
+  }
+  return pool
+}
+
+/**
  * Save a single chunk to the database
  *
  * @param fileExtractionId - File ID
@@ -72,7 +82,7 @@ export async function saveChunk(
     JSON.stringify(metadata || {})
   ]
 
-  const result = await pool.query(query, values)
+  const result = await getPool().query(query, values)
   return result.rows[0].id
 }
 
@@ -102,7 +112,7 @@ export async function saveChunks(
   )
 
   // Batch insert
-  const client = await pool.connect()
+  const client = await getPool().connect()
   const chunkIds: string[] = []
 
   try {
@@ -274,7 +284,7 @@ export async function searchSimilarChunks(
     }))
   })
 
-  const result = await pool.query(query, values)
+  const result = await getPool().query(query, values)
 
   console.log('[VectorDB] Query result:', {
     rowCount: result.rowCount,
@@ -340,7 +350,7 @@ export async function searchCrossConversations(
 
   const values = [embeddingVector, excludeConversationId, threshold, maxResults]
 
-  const result = await pool.query(query, values)
+  const result = await getPool().query(query, values)
   return result.rows
 }
 
@@ -358,7 +368,7 @@ export async function getFileChunks(fileExtractionId: string): Promise<FileChunk
     ORDER BY chunk_index
   `
 
-  const result = await pool.query(query, [fileExtractionId])
+  const result = await getPool().query(query, [fileExtractionId])
   return result.rows
 }
 
@@ -370,7 +380,7 @@ export async function getFileChunks(fileExtractionId: string): Promise<FileChunk
  */
 export async function deleteFileChunks(fileExtractionId: string): Promise<number> {
   const query = 'DELETE FROM file_chunks WHERE file_extraction_id = $1'
-  const result = await pool.query(query, [fileExtractionId])
+  const result = await getPool().query(query, [fileExtractionId])
   return result.rowCount || 0
 }
 
@@ -386,7 +396,7 @@ export async function countFileChunks(fileExtractionId: string): Promise<number>
   })
 
   const query = 'SELECT COUNT(*) FROM file_chunks WHERE file_extraction_id = $1'
-  const result = await pool.query(query, [fileExtractionId])
+  const result = await getPool().query(query, [fileExtractionId])
   const count = parseInt(result.rows[0].count, 10)
 
   console.log('[VectorDB] countFileChunks result:', {
@@ -411,7 +421,7 @@ export async function markFileAsIndexed(fileExtractionId: string): Promise<void>
     WHERE id = $1
   `
 
-  await pool.query(query, [fileExtractionId])
+  await getPool().query(query, [fileExtractionId])
 }
 
 /**
@@ -436,7 +446,7 @@ export async function getFilesToProcess(limit: number = 10): Promise<Array<{
     LIMIT $1
   `
 
-  const result = await pool.query(query, [limit])
+  const result = await getPool().query(query, [limit])
   return result.rows
 }
 
@@ -459,7 +469,7 @@ export async function updateFileProcessingStatus(
     WHERE id = $3
   `
 
-  await pool.query(query, [status, error || null, fileExtractionId])
+  await getPool().query(query, [status, error || null, fileExtractionId])
 }
 
 /**
@@ -502,7 +512,7 @@ export async function hybridSearch(
     WHERE ${keywordConditions}
   `
 
-  const keywordResults = await pool.query(keywordQuery, options.keywords)
+  const keywordResults = await getPool().query(keywordQuery, options.keywords)
 
   // Merge and deduplicate results
   const resultMap = new Map<string, SearchResult>()

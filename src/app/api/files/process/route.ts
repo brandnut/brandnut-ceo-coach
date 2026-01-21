@@ -135,6 +135,14 @@ export async function GET(request: NextRequest) {
 
     // Query processing status from database
     const { pool } = await import('@/lib/db')
+
+    if (!pool) {
+      return NextResponse.json({
+        success: false,
+        error: 'Database not available'
+      }, { status: 500 })
+    }
+
     const query = `
       SELECT
         id,

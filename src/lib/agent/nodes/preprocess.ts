@@ -8,58 +8,6 @@ import { SystemMessage, HumanMessage } from '@langchain/core/messages'
 import { BaseMessage } from '@langchain/core/messages'
 import { AgentState } from '../state'
 import { searchMemory, formatMemoryContext } from '@/lib/memory/client'
-import { searchSimilarChunks, searchCrossConversations, countFileChunks } from '@/lib/rag/vector-db'
-import { getFileExtractions } from '@/lib/db/file-queries'
-import { getRAGConfig } from '@/lib/rag/config'
-
-/**
- * Wait for files to be indexed (with timeout)
- *
- * @param fileIds - Array of file IDs to wait for
- * @param maxWaitTime - Maximum time to wait in ms (default: 10 seconds)
- * @param checkInterval - Time between checks in ms (default: 500ms)
- */
-async function waitForFilesIndexed(
-  fileIds: string[],
-  maxWaitTime: number = 10000,
-  checkInterval: number = 500
-): Promise<void> {
-  const startTime = Date.now()
-
-  console.log('[Preprocess] Waiting for files to be indexed:', {
-    fileCount: fileIds.length,
-    maxWaitTime: `${maxWaitTime}ms`,
-    checkInterval: `${checkInterval}ms`
-  })
-
-  while (Date.now() - startTime < maxWaitTime) {
-    // Check if all files have chunks
-    const chunkCounts = await Promise.all(
-      fileIds.map(async (fileId) => {
-        const count = await countFileChunks(fileId)
-        return { fileId, count }
-      })
-    )
-
-    const allIndexed = chunkCounts.every(({ count }) => count > 0)
-
-    console.log('[Preprocess] File indexing status:', chunkCounts)
-
-    if (allIndexed) {
-      console.log('[Preprocess] All files indexed successfully')
-      return
-    }
-
-    // Wait before checking again
-    await new Promise(resolve => setTimeout(resolve, checkInterval))
-  }
-
-  // Timeout reached
-  console.warn('[Preprocess] Timeout waiting for files to be indexed', {
-    waited: `${Date.now() - startTime}ms`,
-    fileIds
-  })
-}
 
 export async function preprocessNode(state: AgentState): Promise<Partial<AgentState>> {
   console.log('[Preprocess] Starting preprocessing', {
@@ -155,89 +103,20 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
     }
   }
 
-  // 5. RAG retrieval - search relevant file chunks
-  let ragContext = ''
-  const config = getRAGConfig()
+  // 5. RAG retrieval is now a tool - removed from preprocess
+  // RAG is now available as 'rag_search' tool for the agent to use when needed
+  // This allows the LLM to decide when to search documents instead of always injecting context
 
-  console.log('[Preprocess] RAG check:', {
-    enableRAG: config.features.enableRAG,
-    hasConversationId: !!state.conversationId,
-    messageCount: state.messages.length,
-    hasAttachmentIds: !!state.attachmentIds,
-    attachmentIdsCount: state.attachmentIds?.length || 0,
-    attachmentIds: state.attachmentIds
-  })
-
-  if (config.features.enableRAG && state.conversationId && state.messages.length > 0) {
-    const lastMessage = state.messages[state.messages.length - 1]
-
-    if (lastMessage && lastMessage._getType() === 'human') {
-      const query = typeof lastMessage.content === 'string' ? lastMessage.content : ''
-
-      if (query && state.attachmentIds && state.attachmentIds.length > 0) {
-        console.log('[Preprocess] RAG search for attachments:', state.attachmentIds)
-
-        try {
-          // Search current attachments first (highest priority)
-          const currentResults = await searchSimilarChunks(query, {
-            conversationId: state.conversationId,
-            fileIds: state.attachmentIds,
-            maxResults: config.retrieval.currentConvMaxResults,
-            threshold: config.retrieval.currentConvThreshold
-          })
-
-          console.log('[Preprocess] Current conversation RAG results:', currentResults.length)
-
-          if (currentResults.length > 0) {
-            const formattedChunks = currentResults.map((r) =>
-              `[来自: ${r.file_name}, 相似度: ${(r.similarity * 100).toFixed(0)}%]\n${r.chunk_text}`
-            ).join('\n\n---\n\n')
-
-            ragContext = `\n\n[上传文档中的相关内容]\n${formattedChunks}`
-          }
-
-          // Cross-conversation search (if enabled and no current results)
-          if (config.retrieval.crossConvEnabled && currentResults.length < 3) {
-            console.log('[Preprocess] Cross-conversation RAG search')
-
-            const crossResults = await searchCrossConversations(
-              query,
-              state.conversationId,
-              {
-                maxResults: config.retrieval.crossConvMaxResults,
-                threshold: config.retrieval.crossConvThreshold
-              }
-            )
-
-            console.log('[Preprocess] Cross-conversation RAG results:', crossResults.length)
-
-            if (crossResults.length > 0) {
-              const formattedCrossChunks = crossResults.map((r) =>
-                `[来自历史对话: ${r.file_name}, 相似度: ${(r.similarity * 100).toFixed(0)}%]\n${r.chunk_text}`
-              ).join('\n\n---\n\n')
-
-              ragContext += `\n\n[历史文档中的相关内容]\n${formattedCrossChunks}`
-            }
-          }
-        } catch (error) {
-          console.error('[Preprocess] RAG search failed:', error)
-          // Don't fail the entire request if RAG fails
-        }
-      }
-    }
-  }
-
-  // 6. Build final augmented message
+  // 6. Build final augmented message (only memory, no RAG)
   if (state.userId && state.conversationId && state.messages.length > 0) {
     const lastMessage = state.messages[state.messages.length - 1]
 
     if (lastMessage && lastMessage._getType() === 'human') {
       const query = typeof lastMessage.content === 'string' ? lastMessage.content : ''
 
-      // Build augmented content: memory + RAG + original query
+      // Build augmented content: memory + original query (no automatic RAG)
       const contexts: string[] = []
       if (memoryContext) contexts.push(memoryContext)
-      if (ragContext) contexts.push(ragContext)
 
       let augmentedContent = query
       if (contexts.length > 0) {
@@ -247,13 +126,16 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
       messages.push(new HumanMessage(augmentedContent))
       console.log('[Preprocess] Final augmentation:', {
         hasMemory: !!memoryContext,
-        hasRAG: !!ragContext,
+        hasRAG: "RAG is now a tool, not automatic",
         totalLength: augmentedContent.length
       })
     } else if (lastMessage) {
       // Not a HumanMessage (e.g., AIMessage), add as-is
       messages.push(lastMessage)
     }
+  } else if (state.messages.length > 0) {
+    // No human message found, just add all messages
+    messages.push(...state.messages)
   } else {
     // No userId/conversationId, just add the last message as-is
     const lastMessage = state.messages[state.messages.length - 1]
@@ -268,7 +150,6 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
     requestMetadata: {
       ...requestMetadata,
       memoryContext,
-      ragContext,
     },
     originalUserMessage,
   }

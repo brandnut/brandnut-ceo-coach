@@ -140,6 +140,9 @@ export async function processFile(
     // Update conversation_id if provided
     if (options?.conversationId) {
       const { pool } = await import('../db')
+      if (!pool) {
+        throw new Error('Database not available')
+      }
       await pool.query(
         'UPDATE file_extractions SET conversation_id = $1 WHERE id = $2',
         [options.conversationId, fileId]
@@ -177,6 +180,9 @@ export async function processFile(
 
         // Save summary to database
         const { pool } = await import('../db')
+        if (!pool) {
+          throw new Error('Database not available')
+        }
         await pool.query(
           'UPDATE file_extractions SET summary = $1 WHERE id = $2',
           [summary, fileId]

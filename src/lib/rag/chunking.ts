@@ -103,7 +103,6 @@ export function chunkText(text: string, options?: ChunkingOptions): Chunk[] {
   const chunkSize = options?.chunkSize || config.chunking.chunkSize
   const chunkOverlap = options?.chunkOverlap || config.chunking.chunkOverlap
   const minChunkSize = options?.minChunkSize || config.chunking.minChunkSize
-  const maxChunkSize = options?.maxChunkSize || config.chunking.maxChunkSize
   const separators = options?.separators || config.chunking.separators
 
   if (!text || text.trim().length === 0) {
@@ -123,7 +122,7 @@ export function chunkText(text: string, options?: ChunkingOptions): Chunk[] {
     const estimatedTokens = estimateTokenCount(initialChunk)
 
     // If adding this chunk would exceed max size, save current and start new
-    if (currentChunk && estimateTokenCount(currentChunk) + estimatedTokens > maxChunkSize) {
+    if (currentChunk && estimateTokenCount(currentChunk) + estimatedTokens > chunkSize) {
       if (currentChunk.trim().length > 0) {
         chunks.push({
           text: currentChunk.trim(),
@@ -221,7 +220,7 @@ export function chunkText(text: string, options?: ChunkingOptions): Chunk[] {
   for (const chunk of mergedChunks) {
     const estimatedTokens = estimateTokenCount(chunk.text)
 
-    if (estimatedTokens <= maxChunkSize) {
+    if (estimatedTokens <= chunkSize) {
       finalChunks.push(chunk)
     } else {
       // Split oversized chunk

@@ -9,7 +9,7 @@ import { pool } from '@/lib/db'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Authentication
@@ -18,7 +18,7 @@ export async function GET(
       return createAuthErrorResponse('Unauthorized', authResult.error || 'INVALID_TOKEN')
     }
 
-    const conversationId = params.id
+    const { id: conversationId } = await params
 
     // Check pool is available
     if (!pool) {
