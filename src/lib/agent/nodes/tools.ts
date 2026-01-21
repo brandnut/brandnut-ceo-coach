@@ -7,6 +7,7 @@
 import { ToolNode } from '@langchain/langgraph/prebuilt'
 import { tool } from '@langchain/core/tools'
 import { z } from 'zod'
+import { ToolMessage } from '@langchain/core/messages'
 import { AgentState } from '../state'
 import { loggedFetch } from '@/lib/http/logged-client'
 import { brandnutTools, BRANDNUT_TOOL_REGISTRY } from '@/lib/tools/brandnut'
@@ -185,17 +186,18 @@ async function ragSearch(args: {
       return `在文档中未找到与"${args.query}"相关的内容。请尝试换一个问法或上传相关文档。`
     }
 
-    // Format results
+    // Format results with more complete content
     const formattedResults = results.map((r, idx) => {
       const parts = [
-        `[${idx + 1}] ${r.file_name}`,
+        `[${idx + 1}] 文件: ${r.file_name}`,
         `相似度: ${(r.similarity * 100).toFixed(1)}%`,
-        `内容: ${r.chunk_text.substring(0, 200)}${r.chunk_text.length > 200 ? '...' : ''}`
+        `---`,
+        r.chunk_text  // Return full chunk text, not truncated
       ]
       return parts.join('\n')
     })
 
-    return `在文档中找到 ${results.length} 条相关内容：\n\n${formattedResults.join('\n\n---\n\n')}`
+    return `在文档中找到 ${results.length} 条相关内容：\n\n${formattedResults.join('\n\n---\n\n')}\n\n 请基于以上搜索结果回答用户问题。`
   } catch (error) {
     console.error('[RAG Tool] Error:', error)
     return `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -216,11 +218,15 @@ function createTools(userId: string, conversationId: string) {
         name: 'rag_search',
         description:
           '搜索用户上传的文档，基于语义相似度查找相关内容。' +
-          '使用场景: 1. 当用户询问关于上传文档的问题时使用，如"文档中提到了什么"、"某个制度的具体内容"等。2. 你需要额外的知识储备。' +
-          '可以搜索 TXT、DOCX、XLSX、PPTX 等文本文档。' +
-          '\n\n重要提示：' +
-          '\n- 优先使用此工具来回答关于已上传文档的问题' +
-          '\n- 相似度阈值默认为70%，可以调整以获取更多或更少的结果',
+          '\n\n使用场景:' +
+          '\n1. 当用户询问关于上传文档的问题时使用，如"文档中提到了什么"、"某个制度的具体内容"等' +
+          '\n2. 你需要额外的知识储备或验证信息时使用' +
+          '\n\n支持的格式: TXT、DOCX、XLSX、PPTX 等文本文档' +
+          '\n\n工作原理: 工具会返回完整的文档片段内容，收到结果后请直接基于结果回答用户问题，不要重复搜索。' +
+          '\n\n参数说明:' +
+          '\n- 相似度阈值默认为70%，可以调整以获取更多或更少的结果' +
+          '\n- 返回结果数量默认为5条，最多10条' +
+          '\n\n重要: 收到搜索结果后，必须基于结果直接回答用户问题，不要再次调用rag_search或bocha_search。',
         schema: z.object({
           query: z.string().describe('搜索问题或关键词'),
           maxResults: z.number().min(1).max(10).optional().describe('返回结果数量（默认5条）'),
@@ -272,6 +278,44 @@ export const TOOL_REGISTRY: Record<string, { display_name: string }> = {
  * Tools node using LangGraph's ToolNode
  */
 export async function toolsNode(state: AgentState): Promise<Partial<AgentState>> {
+  console.log('[Tools Node] Starting tools execution', {
+    messageCount: state.messages.length,
+    toolCallCounts: state.toolCallCounts,
+  })
+
+  // Track tool call counts to prevent infinite loops
+  const counts = state.toolCallCounts || {}
+
+  // Check each message for tool calls and increment counts
+  for (const msg of state.messages) {
+    if (msg._getType() === 'ai') {
+      const aiMsg = msg as any
+      if (aiMsg.tool_calls) {
+        for (const tc of aiMsg.tool_calls) {
+          counts[tc.name] = (counts[tc.name] || 0) + 1
+          console.log(`[Tools Node] Tool call count: ${tc.name} -> ${counts[tc.name]}`)
+
+          // Prevent infinite loops: limit rag_search to 3 calls
+          if (tc.name === 'rag_search' && counts[tc.name] > 3) {
+            console.error('[Tools] RAG search limit exceeded (3 calls), blocking further calls')
+
+            // Return error message instead of calling the tool
+            return {
+              messages: [
+                new ToolMessage({
+                  content: `错误：rag_search 工具调用次数超过限制（3次）。请基于已有的搜索结果回答用户问题，不要重复搜索。`,
+                  tool_call_id: tc.id,
+                  name: tc.name,
+                })
+              ],
+              toolCallCounts: counts,
+            }
+          }
+        }
+      }
+    }
+  }
+
   // Create tools with context (closure captures userId and conversationId)
   const toolsWithContext = createTools(state.userId, state.conversationId)
 
@@ -281,5 +325,20 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
   // ToolNode expects { messages: BaseMessage[] }
   const result = await node.invoke({ messages: state.messages })
 
-  return { messages: result.messages }
+  console.log('[Tools Node] Tool execution completed', {
+    resultMessageCount: result.messages.length,
+    toolMessages: result.messages.filter((m: any) => m._getType && m._getType() === 'tool').length,
+    toolResults: result.messages
+      .filter((m: any) => m._getType && m._getType() === 'tool')
+      .map((m: any) => ({
+        name: m.name,
+        contentLength: m.content?.length || 0,
+        contentPreview: m.content?.substring(0, 100) || '',
+      }))
+  })
+
+  return {
+    messages: result.messages,
+    toolCallCounts: counts,
+  }
 }

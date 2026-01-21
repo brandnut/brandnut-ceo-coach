@@ -25,6 +25,8 @@ export interface AgentState {
   }
   // Original user message (before memory augmentation)
   originalUserMessage?: string
+  // Tool call tracking (for preventing infinite loops)
+  toolCallCounts?: Record<string, number>
 }
 
 export const agentStateAnnotation = Annotation.Root({
@@ -45,4 +47,5 @@ export const agentStateAnnotation = Annotation.Root({
   attachmentIds: Annotation<string[] | undefined>(),
   requestMetadata: Annotation<{ timestamp: number; ip?: string; memoryContext?: string; ragContext?: string } | undefined>(),
   originalUserMessage: Annotation<string | undefined>(),
+  toolCallCounts: Annotation<Record<string, number> | undefined>(),
 })
