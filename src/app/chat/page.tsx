@@ -521,14 +521,6 @@ export default function ChatPage() {
                         fileName.endsWith('.xlsx') ||
                         fileName.endsWith('.pptx')
 
-        console.log('[Chat Page] Attachment:', {
-          name: f.name,
-          uploadedId: f.uploadedId,
-          uploadedIdType: typeof f.uploadedId,
-          isUUID,
-          isTextFile,
-          mimeType: f.type
-        })
 
         // For text files, accept the uploadedId whether UUID or path
         return isTextFile && f.uploadedId
@@ -537,19 +529,26 @@ export default function ChatPage() {
       .filter((id): id is string => !!id);
 
     const agentAttachments: Attachment[] = attachments
-      .filter(
-        (f) =>
-          f.uploadedId &&
-          f.url &&
-          (f.type.startsWith("image/") || f.type === "application/pdf")
-      )
+      .filter((f) => f.uploadedId && f.url)
       .map((f) => {
-        const isImage = f.type.startsWith("image/");
+        // Determine attachment type based on MIME type
+        let type: 'image' | 'pdf' | 'document';
+
+        if (f.type.startsWith("image/")) {
+          type = 'image';
+        } else if (f.type === 'application/pdf') {
+          type = 'pdf';
+        } else {
+          // All other file types (txt, docx, xlsx, pptx, etc.) are documents
+          type = 'document';
+        }
+
         return {
-          type: (isImage ? "image" : "pdf") as "image" | "pdf",
+          type,
           url: f.url!,
           mimeType: f.type,
           name: f.name,
+          id: f.uploadedId, // Include file extraction ID for documents
         };
       });
 
