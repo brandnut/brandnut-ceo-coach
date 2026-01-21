@@ -84,13 +84,31 @@ jobs:
     needs: [build]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/saas'
     steps:
-      - name: Deploy to saas (saas branch)
+      - name: Deploy to production server (saas branch)
         if: github.ref == 'refs/heads/saas'
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USERNAME }}
           key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            cd /root/cicd/brandnut-ceo-coach
+            git checkout saas
+            git reset --hard
+            git pull origin saas
+            docker login -u ${{ secrets.DOCKER_USERNAME }} -p '${{ secrets.DOCKER_PASSWORD }}' ${{ secrets.DOCKER_REGISTRY_URL }}
+            docker pull ${{ secrets.DOCKER_REGISTRY_URL }}/brandnut/brandnut-ceo-coach:saas
+            docker compose down
+            DOCKER_REGISTRY_URL=${{ secrets.DOCKER_REGISTRY_URL }} IMAGE_TAG=saas docker compose up -d
+            docker image prune -a -f
+
+      - name: Deploy to Singapore server (saas branch)
+        if: github.ref == 'refs/heads/saas'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SG_HOST }}
+          username: ${{ secrets.SG_USERNAME }}
+          key: ${{ secrets.SG_SSH_KEY }}
           script: |
             cd /root/cicd/brandnut-ceo-coach
             git checkout saas

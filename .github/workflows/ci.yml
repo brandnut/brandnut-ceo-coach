@@ -101,13 +101,30 @@ jobs:
             GUEST_MODE_ENABLED=${{ vars.GUEST_MODE_ENABLED }}
             NEXT_PUBLIC_BASE_PATH=${{ vars.NEXT_PUBLIC_BASE_PATH }}
 
-      - name: Deploy to production (main branch)
+      - name: Deploy to production server (main branch)
         if: github.ref == 'refs/heads/main'
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USERNAME }}
           key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            cd /root/cicd/brandnut-ceo-coach
+            git reset --hard
+            git pull origin main
+            docker login -u ${{ secrets.DOCKER_USERNAME }} -p '${{ secrets.DOCKER_PASSWORD }}' ${{ secrets.DOCKER_REGISTRY_URL }}
+            docker pull ${{ secrets.DOCKER_REGISTRY_URL }}/brandnut/brandnut-ceo-coach:latest
+            docker compose down
+            DOCKER_REGISTRY_URL=${{ secrets.DOCKER_REGISTRY_URL }} IMAGE_TAG=latest docker compose up -d
+            docker image prune -a -f
+
+      - name: Deploy to Singapore server (main branch)
+        if: github.ref == 'refs/heads/main'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SG_HOST }}
+          username: ${{ secrets.SG_USERNAME }}
+          key: ${{ secrets.SG_SSH_KEY }}
           script: |
             cd /root/cicd/brandnut-ceo-coach
             git reset --hard
