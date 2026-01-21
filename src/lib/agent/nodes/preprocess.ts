@@ -107,16 +107,22 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
   // RAG is now available as 'rag_search' tool for the agent to use when needed
   // This allows the LLM to decide when to search documents instead of always injecting context
 
-  // 6. Build final augmented message (only memory, no RAG)
+  // 6. Build final augmented message (memory + persistent attachment hint)
   if (state.userId && state.conversationId && state.messages.length > 0) {
     const lastMessage = state.messages[state.messages.length - 1]
 
     if (lastMessage && lastMessage._getType() === 'human') {
       const query = typeof lastMessage.content === 'string' ? lastMessage.content : ''
 
-      // Build augmented content: memory + original query (no automatic RAG)
+      // Build augmented content: memory + attachment hint + original query
       const contexts: string[] = []
       if (memoryContext) contexts.push(memoryContext)
+
+      // Add persistent attachment hint if conversation has attachments
+      // This query runs on every user message to maintain context
+      if (state.attachmentIds && state.attachmentIds.length > 0) {
+        contexts.push(`[系统提示] 当前对话中有 ${state.attachmentIds.length} 个已上传的文档。你可以使用 "rag_search" 工具来搜索这些文档的详细内容。`)
+      }
 
       let augmentedContent = query
       if (contexts.length > 0) {
@@ -126,7 +132,9 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
       messages.push(new HumanMessage(augmentedContent))
       console.log('[Preprocess] Final augmentation:', {
         hasMemory: !!memoryContext,
-        hasRAG: "RAG is now a tool, not automatic",
+        hasAttachmentHint: !!(state.attachmentIds && state.attachmentIds.length > 0),
+        attachmentCount: state.attachmentIds?.length || 0,
+        hasRAG: false,  // RAG is now a tool
         totalLength: augmentedContent.length
       })
     } else if (lastMessage) {

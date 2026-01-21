@@ -16,6 +16,7 @@ export interface FileExtraction {
   extracted_at: string
   created_at: string
   metadata: Record<string, any>
+  summary?: string | null  // 文件摘要（如果有的话）
 }
 
 // Database wrapper
@@ -107,7 +108,7 @@ export async function getFileExtractions(
   return withClient(async (client) => {
     const query = `
       SELECT id, file_url, file_name, extracted_text,
-             mime_type, file_size, extracted_at, created_at, metadata
+             mime_type, file_size, extracted_at, created_at, metadata, summary
       FROM file_extractions
       WHERE id = ANY($1)
     `

@@ -147,10 +147,15 @@ export async function POST(request: NextRequest) {
         mimeType: ext.mime_type || 'application/octet-stream',
       }))
 
-      // Build injected_content: "[User uploaded file: xxx.docx]\n{file text}\n{user message}"
-      const fileParts = extractions.map(
-        (ext) => `[User uploaded file: ${ext.file_name}]\n${ext.extracted_text}`
-      )
+      // Build injected_content: file summary + user message
+      // Only include summary if available, skip the raw extracted text to avoid huge messages
+      const fileParts = extractions.map((ext) => {
+        if (ext.summary) {
+          return `[User uploaded file: ${ext.file_name}\n内容摘要：${ext.summary}`
+        } else {
+          return `[User uploaded file: ${ext.file_name}\n(文件已索引，可通过 rag_search 工具查询详细内容)`
+        }
+      })
 
       injected_content = [...fileParts, message].join('\n\n')
     }
