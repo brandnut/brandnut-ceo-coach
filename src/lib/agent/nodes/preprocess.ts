@@ -8,9 +8,58 @@ import { SystemMessage, HumanMessage } from '@langchain/core/messages'
 import { BaseMessage } from '@langchain/core/messages'
 import { AgentState } from '../state'
 import { searchMemory, formatMemoryContext } from '@/lib/memory/client'
-import { searchSimilarChunks, searchCrossConversations } from '@/lib/rag/vector-db'
+import { searchSimilarChunks, searchCrossConversations, countFileChunks } from '@/lib/rag/vector-db'
 import { getFileExtractions } from '@/lib/db/file-queries'
 import { getRAGConfig } from '@/lib/rag/config'
+
+/**
+ * Wait for files to be indexed (with timeout)
+ *
+ * @param fileIds - Array of file IDs to wait for
+ * @param maxWaitTime - Maximum time to wait in ms (default: 10 seconds)
+ * @param checkInterval - Time between checks in ms (default: 500ms)
+ */
+async function waitForFilesIndexed(
+  fileIds: string[],
+  maxWaitTime: number = 10000,
+  checkInterval: number = 500
+): Promise<void> {
+  const startTime = Date.now()
+
+  console.log('[Preprocess] Waiting for files to be indexed:', {
+    fileCount: fileIds.length,
+    maxWaitTime: `${maxWaitTime}ms`,
+    checkInterval: `${checkInterval}ms`
+  })
+
+  while (Date.now() - startTime < maxWaitTime) {
+    // Check if all files have chunks
+    const chunkCounts = await Promise.all(
+      fileIds.map(async (fileId) => {
+        const count = await countFileChunks(fileId)
+        return { fileId, count }
+      })
+    )
+
+    const allIndexed = chunkCounts.every(({ count }) => count > 0)
+
+    console.log('[Preprocess] File indexing status:', chunkCounts)
+
+    if (allIndexed) {
+      console.log('[Preprocess] All files indexed successfully')
+      return
+    }
+
+    // Wait before checking again
+    await new Promise(resolve => setTimeout(resolve, checkInterval))
+  }
+
+  // Timeout reached
+  console.warn('[Preprocess] Timeout waiting for files to be indexed', {
+    waited: `${Date.now() - startTime}ms`,
+    fileIds
+  })
+}
 
 export async function preprocessNode(state: AgentState): Promise<Partial<AgentState>> {
   console.log('[Preprocess] Starting preprocessing', {
@@ -109,6 +158,15 @@ export async function preprocessNode(state: AgentState): Promise<Partial<AgentSt
   // 5. RAG retrieval - search relevant file chunks
   let ragContext = ''
   const config = getRAGConfig()
+
+  console.log('[Preprocess] RAG check:', {
+    enableRAG: config.features.enableRAG,
+    hasConversationId: !!state.conversationId,
+    messageCount: state.messages.length,
+    hasAttachmentIds: !!state.attachmentIds,
+    attachmentIdsCount: state.attachmentIds?.length || 0,
+    attachmentIds: state.attachmentIds
+  })
 
   if (config.features.enableRAG && state.conversationId && state.messages.length > 0) {
     const lastMessage = state.messages[state.messages.length - 1]

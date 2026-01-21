@@ -18,6 +18,7 @@ import {
 } from '@/lib/db/agent-queries'
 import { getUserChatConfig } from '@/lib/db/queries'
 import { getFileExtractions } from '@/lib/db/file-queries'
+import { pool } from '@/lib/db'
 import { streamChatResponseGraph } from '@/lib/agent/chat'
 import { agentConfig } from '@/config/app'
 import { ChatRequest, Attachment } from '@/types/agent'
@@ -42,32 +43,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 3. Handle attachments
+    // 3. Handle attachments (only images/PDFs for multimodal)
+    // Text documents are processed later after loading from database
     let attachments: Attachment[] = []
     let injected_content: string | undefined = undefined
 
-    // 3a. Process attachment_ids (text documents with extracted text)
-    if (attachment_ids && attachment_ids.length > 0) {
-      const extractions = await getFileExtractions(attachment_ids)
-
-      // Build attachments metadata (for UI display)
-      attachments = extractions.map((ext) => ({
-        id: ext.id,
-        type: 'document' as const,
-        url: ext.file_url,
-        name: ext.file_name,
-        mimeType: ext.mime_type || 'application/octet-stream',
-      }))
-
-      // Build injected_content: "[User uploaded file: xxx.docx]\n{file text}\n{user message}"
-      const fileParts = extractions.map(
-        (ext) => `[User uploaded file: ${ext.file_name}]\n${ext.extracted_text}`
-      )
-
-      injected_content = [...fileParts, message].join('\n\n')
-    }
-
-    // 3b. Process client attachments (images/PDFs for multimodal)
+    // 3a. Process client attachments (images/PDFs for multimodal)
     if (clientAttachments && clientAttachments.length > 0) {
       attachments = [...attachments, ...clientAttachments]
     }
@@ -88,6 +69,90 @@ export async function POST(request: NextRequest) {
       // Create new conversation
       const newConv = await createConversation(authResult.user.id)
       convId = newConv.id
+    }
+
+    // 4b. Load conversation attachments from database (if conversation exists)
+    // This ensures RAG works even when frontend doesn't send attachment_ids
+    let conversationAttachmentIds: string[] = []
+    if (convId && pool) {
+      try {
+        const attachQuery = `
+          SELECT file_extraction_id
+          FROM conversation_attachments
+          WHERE conversation_id = $1
+          ORDER BY attached_at ASC
+        `
+        const attachResult = await pool.query(attachQuery, [convId])
+        conversationAttachmentIds = attachResult.rows.map(row => row.file_extraction_id)
+
+        console.log('[Chat API] Loaded conversation attachments from database:', {
+          convId,
+          count: conversationAttachmentIds.length,
+          attachmentIds: conversationAttachmentIds
+        })
+      } catch (error) {
+        console.error('[Chat API] Failed to load conversation attachments:', error)
+      }
+    }
+
+    // 4c. Merge frontend attachment_ids with database attachments
+    // Frontend attachment_ids are saved to database for future use
+    if (attachment_ids && attachment_ids.length > 0 && pool) {
+      try {
+        const attachQuery = `
+          INSERT INTO conversation_attachments (conversation_id, file_extraction_id)
+          VALUES ${attachment_ids.map((_, i) => `($1, $${i + 2})`).join(', ')}
+          ON CONFLICT (conversation_id, file_extraction_id) DO NOTHING
+        `
+        await pool.query(attachQuery, [convId, ...attachment_ids])
+        console.log('[Chat API] Attached files to conversation:', {
+          convId,
+          fileCount: attachment_ids.length
+        })
+      } catch (error) {
+        console.error('[Chat API] Failed to attach files to conversation:', error)
+      }
+    }
+
+    // 4d. Combine all attachment IDs (database + newly uploaded)
+    const allAttachmentIds = [
+      ...new Set([
+        ...conversationAttachmentIds,  // From database (persisted)
+        ...(attachment_ids || [])       // From frontend (just uploaded)
+      ])
+    ]
+
+    console.log('[Chat API] Combined attachment IDs for RAG:', {
+      database: conversationAttachmentIds.length,
+      frontend: (attachment_ids || []).length,
+      total: allAttachmentIds.length,
+      allAttachmentIds
+    })
+
+    // Use allAttachmentIds instead of attachment_ids for subsequent processing
+    const effectiveAttachmentIds = allAttachmentIds.length > 0 ? allAttachmentIds : undefined
+
+    // 4e. Process effective attachment IDs for RAG
+    if (effectiveAttachmentIds && effectiveAttachmentIds.length > 0) {
+      console.log('[Chat API] Processing effective attachment IDs:', effectiveAttachmentIds)
+
+      const extractions = await getFileExtractions(effectiveAttachmentIds)
+
+      // Build attachments metadata (for UI display)
+      attachments = extractions.map((ext) => ({
+        id: ext.id,
+        type: 'document' as const,
+        url: ext.file_url,
+        name: ext.file_name,
+        mimeType: ext.mime_type || 'application/octet-stream',
+      }))
+
+      // Build injected_content: "[User uploaded file: xxx.docx]\n{file text}\n{user message}"
+      const fileParts = extractions.map(
+        (ext) => `[User uploaded file: ${ext.file_name}]\n${ext.extracted_text}`
+      )
+
+      injected_content = [...fileParts, message].join('\n\n')
     }
 
     // 5. Save user message immediately (eliminates consistency issues)
@@ -139,7 +204,7 @@ export async function POST(request: NextRequest) {
               conversationId: convId,
               modelName,
               systemPrompt,
-              attachmentIds: attachment_ids,
+              attachmentIds: effectiveAttachmentIds, // Use effective IDs (database + frontend)
             })) {
               // Handle different event types
               if (typeof delta === 'string') {

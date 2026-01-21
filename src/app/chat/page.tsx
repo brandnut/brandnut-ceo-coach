@@ -502,31 +502,39 @@ export default function ChatPage() {
     let finalConvId = currentConvId;
 
     // Separate attachments into:
-    // 1. Text documents (txt/docx/xlsx) -> use attachment_ids
+    // 1. Text documents (txt/docx/xlsx/pptx) -> use attachment_ids (RAG)
     // 2. Images/PDFs -> use attachments (multimodal)
     const textDocumentIds = attachments
       .filter((f) => f.uploadedId)  // Get attachments with uploadedId
       .filter((f) => {
-        // 只包含 UUID 格式的 uploadedId
+        // TXT/DOCX/XLSX/PPTX files should return UUID from upload API
+        // Check MIME type OR file extension as fallback (some browsers don't detect MIME type correctly)
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(f.uploadedId || '')
+        const fileName = f.name.toLowerCase()
+        const isTextFile = f.type === 'text/plain' ||
+                        f.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                        f.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                        f.type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
+                        // Fallback: check file extension if MIME type is not reliable
+                        fileName.endsWith('.txt') ||
+                        fileName.endsWith('.docx') ||
+                        fileName.endsWith('.xlsx') ||
+                        fileName.endsWith('.pptx')
+
         console.log('[Chat Page] Attachment:', {
           name: f.name,
           uploadedId: f.uploadedId,
+          uploadedIdType: typeof f.uploadedId,
           isUUID,
+          isTextFile,
           mimeType: f.type
         })
-        return isUUID
+
+        // For text files, accept the uploadedId whether UUID or path
+        return isTextFile && f.uploadedId
       })
       .map((f) => f.uploadedId!)
       .filter((id): id is string => !!id);
-
-    console.log('[Chat Page] textDocumentIds:', textDocumentIds)
-    console.log('[Chat Page] All attachments:', attachments.map(a => ({
-      name: a.name,
-      hasUploadedId: !!a.uploadedId,
-      uploadedId: a.uploadedId,
-      mimeType: a.type
-    })))
 
     const agentAttachments: Attachment[] = attachments
       .filter(

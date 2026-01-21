@@ -153,9 +153,22 @@ export async function searchSimilarChunks(
 ): Promise<SearchResult[]> {
   const config = getRAGConfig()
 
+  console.log('[VectorDB] ===== searchSimilarChunks START =====')
+  console.log('[VectorDB] Input:', {
+    queryTextLength: queryText.length,
+    queryTextPreview: queryText.substring(0, 100),
+    options
+  })
+
   // Generate query embedding
   const embedding = await generateEmbedding(queryText)
   const embeddingVector = embeddingToVectorString(embedding)
+
+  console.log('[VectorDB] Embedding generated:', {
+    dimension: embedding.length,
+    configDimension: config.embedding.dimensions,
+    vectorPreview: embeddingVector.substring(0, 50) + '...'
+  })
 
   const {
     conversationId,
@@ -164,28 +177,73 @@ export async function searchSimilarChunks(
     threshold = config.retrieval.currentConvThreshold
   } = options || {}
 
+  console.log('[VectorDB] Search options:', {
+    conversationId,
+    fileIds,
+    fileIdsCount: fileIds?.length || 0,
+    maxResults,
+    threshold,
+    configThreshold: config.retrieval.currentConvThreshold
+  })
+
   // Build query conditions
   const conditions: string[] = []
-  const values: any[] = []
-  let paramIndex = 1
+  const values: any[] = [embeddingVector]
+  let paramIndex = 2
 
   // Add file filter
   if (fileIds && fileIds.length > 0) {
-    conditions.push(`fc.file_extraction_id = ANY($${paramIndex}::uuid[])`)
-    values.push(fileIds)
-    paramIndex++
+    console.log('[VectorDB] File filter:', {
+      fileIdsLength: fileIds.length,
+      fileIds: fileIds
+    })
+
+    // 生成占位符: $2, $3, ...
+    const uuidPlaceholders = fileIds.map((_, idx) => {
+      return `$${paramIndex + idx}::uuid`
+    }).join(', ')
+
+    conditions.push(`fc.file_extraction_id IN (${uuidPlaceholders})`)
+    
+    // 将文件 ID 追加到 values 数组
+    values.push(...fileIds.map(id => id.trim()))
+    
+    // 更新 paramIndex
+    paramIndex += fileIds.length
+
+    console.log('[VectorDB] File filter added:', {
+      placeholders: uuidPlaceholders,
+      paramIndex
+    })
   }
 
   // Add conversation filter
-  if (conversationId) {
+  // IMPORTANT: Only apply conversation filter if we're NOT filtering by specific files
+  // When fileIds are provided, we want to search those files regardless of conversation
+  if (conversationId && (!fileIds || fileIds.length === 0)) {
     conditions.push(`fe.conversation_id = $${paramIndex}::uuid`)
     values.push(conversationId)
     paramIndex++
+    console.log('[VectorDB] Conversation filter added (no fileIds specified)')
+  } else if (conversationId && fileIds && fileIds.length > 0) {
+    console.log('[VectorDB] Conversation filter SKIPPED (fileIds specified - search across conversations)')
   }
+
+  const thresholdIndex = paramIndex
+  const limitIndex = paramIndex + 1
+
+  values.push(threshold)
+  values.push(maxResults)
 
   const whereClause = conditions.length > 0 ? `AND ${conditions.join(' AND ')}` : ''
 
-  // Execute search query
+  console.log('[VectorDB] Query parameters:', {
+    thresholdIndex,
+    limitIndex,
+    valuesCount: values.length,
+    whereClause
+  })
+
   const query = `
     SELECT
       fc.id as chunk_id,
@@ -200,14 +258,36 @@ export async function searchSimilarChunks(
     JOIN file_extractions fe ON fc.file_extraction_id = fe.id
     WHERE 1=1
       ${whereClause}
-      AND (1 - (fc.embedding <=> $1::vector)) >= $${paramIndex}
+      -- 使用上面计算好的索引
+      AND (1 - (fc.embedding <=> $1::vector)) >= $${thresholdIndex}
     ORDER BY fc.embedding <=> $1::vector
-    LIMIT $${paramIndex + 1}
+    LIMIT $${limitIndex}
   `
 
-  values.unshift(embeddingVector, threshold, maxResults)
+  console.log('[VectorDB] Executing query:', {
+    query,
+    values: values.map((v, i) => ({
+      index: i + 1,
+      type: typeof v,
+      isArray: Array.isArray(v),
+      preview: Array.isArray(v) ? `[array with ${v.length} items]` : String(v).substring(0, 50)
+    }))
+  })
 
   const result = await pool.query(query, values)
+
+  console.log('[VectorDB] Query result:', {
+    rowCount: result.rowCount,
+    rows: result.rows.map(r => ({
+      chunkId: r.chunk_id.substring(0, 8),
+      fileName: r.file_name,
+      similarity: r.similarity,
+      chunkTextPreview: r.chunk_text.substring(0, 50)
+    }))
+  })
+
+  console.log('[VectorDB] ===== searchSimilarChunks END =====')
+
   return result.rows
 }
 
@@ -301,9 +381,20 @@ export async function deleteFileChunks(fileExtractionId: string): Promise<number
  * @returns Number of chunks
  */
 export async function countFileChunks(fileExtractionId: string): Promise<number> {
+  console.log('[VectorDB] countFileChunks:', {
+    fileExtractionId
+  })
+
   const query = 'SELECT COUNT(*) FROM file_chunks WHERE file_extraction_id = $1'
   const result = await pool.query(query, [fileExtractionId])
-  return parseInt(result.rows[0].count, 10)
+  const count = parseInt(result.rows[0].count, 10)
+
+  console.log('[VectorDB] countFileChunks result:', {
+    fileExtractionId,
+    count
+  })
+
+  return count
 }
 
 /**

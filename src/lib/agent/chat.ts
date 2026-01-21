@@ -139,6 +139,14 @@ export async function* streamChatResponseGraph(
     attachmentIds: options.attachmentIds,
   }
 
+  console.log('[Chat Service] Initial state:', {
+    userId: options.userId,
+    conversationId: options.conversationId,
+    attachmentIds: options.attachmentIds,
+    attachmentIdsType: typeof options.attachmentIds,
+    attachmentIdsLength: options.attachmentIds?.length
+  })
+
   // Create and run graph
   const graph = createAgentGraph()
 
