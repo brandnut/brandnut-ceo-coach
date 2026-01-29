@@ -33,9 +33,13 @@ export async function generateDashboardQuestions(
   userId: string,
   organizationId: string
 ): Promise<DashboardQuestions> {
-  // 1. Get org system prompt
+  // 1. Get org system prompt and extract company info
   const orgConfig = await getUserChatConfig(userId, organizationId)
-  const systemPrompt = orgConfig?.system_prompt || '你是一位CEO教练'
+  const rawSystemPrompt = orgConfig?.system_prompt || '你是一位CEO教练'
+
+  // Extract text between <company></company> tags, or use full prompt if not found
+  const companyMatch = rawSystemPrompt.match(/<company>([\s\S]*?)<\/company>/)
+  const systemPrompt = companyMatch ? companyMatch[1].trim() : rawSystemPrompt
 
   // 2. Get user memories from memtensor (using temp conversationId)
   const tempConversationId = `dashboard-${Date.now()}`
@@ -53,7 +57,7 @@ export async function generateDashboardQuestions(
   const prompt = `你是CEO教练。为这位企业家生成9个分类的启发性问题，这些问题是**用户可以问AI的问题**，用于开启对话。
 
 组织背景：
-${systemPrompt.slice(0, 500)}
+${systemPrompt}
 
 用户记忆：
 ${memoryContext}
