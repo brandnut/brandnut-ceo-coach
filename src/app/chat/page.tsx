@@ -6,7 +6,7 @@ import { useApp } from "@/contexts/AppContext";
 import { storage, storageKeys } from "@/lib/storage";
 
 import { Sender, Attachments, Conversations } from "@ant-design/x";
-import { Popover, Upload, Button, Dropdown } from "antd";
+import { Popover, Upload, Button, Dropdown, message } from "antd";
 import type { MenuProps } from "antd";
 import {
   PaperClipOutlined,
@@ -57,6 +57,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 };
 
 export default function ChatPage() {
+  const [messageApi, contextHolder] = message.useMessage();
   const [input, setInput] = useState("");
   const { me, isLoading, logout, organizations } = useApp();
   const isAuthenticated = !!me;
@@ -598,7 +599,10 @@ export default function ChatPage() {
       // SSE parsing with buffer accumulation
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          streamCompleted = true; // Stream ended normally
+          break;
+        }
 
         buffer += decoder.decode(value, { stream: true });
 
@@ -645,13 +649,8 @@ export default function ChatPage() {
                   );
                 } else if (currentEvent === "error") {
                   console.error("Stream error:", data.error);
-                  setMessages((prev) =>
-                    prev.map((msg) =>
-                      msg.id === tempAssistantId
-                        ? { ...msg, content: `⚠️ 错误：${data.error}` }
-                        : msg
-                    )
-                  );
+                  messageApi.error(`流式传输错误: ${data.error}`);
+                  // 保留已生成的内容，不替换消息
                 } else if (currentEvent === "tool_call" && data.tools) {
                   // Tool execution started - update existing assistant message
                   setMessages((prev) =>
@@ -692,14 +691,17 @@ export default function ChatPage() {
         return;
       }
 
+      // Ignore "Load failed" errors (anytime, not just after content received)
+      // This happens when SSE connection closes after successful streaming
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.toLowerCase().includes("load failed")) {
+        console.log("Load failed error, ignoring:", error);
+        return;
+      }
+
       console.error("Send error:", error);
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === tempAssistantId
-            ? { ...msg, content: `Error: ${error}` }
-            : msg
-        )
-      );
+      messageApi.error(`请求失败: ${errorMessage}`);
+      // 保留已生成的内容，不替换消息
     } finally {
       setIsStreaming(false);
       abortControllerRef.current = null;
@@ -811,6 +813,7 @@ export default function ChatPage() {
 
   return (
     <ProtectedRoute>
+      {contextHolder}
       {chatConfig && isAdmin ? (
         <div className="chat-container">
           {/* Desktop sidebar - hidden on mobile */}
